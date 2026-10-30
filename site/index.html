@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pastorando · de olho em quem o Ceará elegeu</title>
+<meta name="description" content="Gastos, votos, projetos e a Régua do Povo dos deputados estaduais, federais e senadores do Ceará. Dados oficiais, de graça.">
+<meta property="og:title" content="Pastorando">
+<meta property="og:description" content="O povo pastorando o poder: gastos, votos e projetos de quem o Ceará elegeu.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M8 20c3.5-6 8-8.5 12-8.5S28.5 14 32 20c-3.5 6-8 8.5-12 8.5S11.5 26 8 20z' fill='%23fbe9c9' stroke='%2316302d' stroke-width='2.4'/%3E%3Ccircle cx='20' cy='20' r='4.6' fill='%23d9432b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="chita" aria-hidden="true"></div>
+<div class="topo-verm">
+<header>
+  <a class="logo" href="#inicio" aria-label="Pastorando, início">
+    <svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><g stroke="#f1ad1b" stroke-width="3" stroke-linecap="round"><path d="M20 2v5M20 33v5M2 20h5M33 20h5M7 7l3.5 3.5M29.5 29.5L33 33M7 33l3.5-3.5M29.5 10.5L33 7"/></g><path d="M8 20c3.5-6 8-8.5 12-8.5S28.5 14 32 20c-3.5 6-8 8.5-12 8.5S11.5 26 8 20z" fill="#fbe9c9" stroke="#16302d" stroke-width="2.4"/><circle cx="20" cy="20" r="4.6" fill="#d9432b"/></svg>
+    <b>pastorando</b>
+  </a>
+  <div class="cab-dir">
+    <a class="ibtn" href="#seguindo" aria-label="Seguindo e avisos"><span id="icSino"></span><span class="n num" id="nSeg">0</span></a>
+    <a class="ibtn" href="#sobre" aria-label="Sobre e fontes" id="lSobre"></a>
+    <button class="ibtn" id="bTema" type="button" aria-label="Mudar para a versão noturna"></button>
+  </div>
+</header>
+<div id="heroi"></div>
+</div>
+<div id="buscaTopo"></div>
+<main id="app"><div class="carregando">Carregando dados…</div></main>
+<footer><div><b>Política é coisa do povo.</b>Pastorando: tomar conta, vigiar. Dados oficiais da Câmara, do Senado, da Assembleia Legislativa do Ceará. Código aberto, sem dinheiro de partido. <span id="atual"></span></div></footer>
+<div class="veu" id="veu" aria-hidden="true"><div class="folha" role="dialog" aria-modal="true" aria-labelledby="fTit" id="folha"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>

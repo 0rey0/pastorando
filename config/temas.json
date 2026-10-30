@@ -1,0 +1,14 @@
+{
+  "_leia": "Palavras que classificam projetos e votações por tema. Sem acento, em minúsculas. Edite para melhorar a classificação.",
+  "temas": {
+    "seguranca": {"nome": "Segurança", "palavras": ["seguranca publica", "policia", "policial", "crime", "criminal", "violencia", "arma", "presidio", "prisional", "faccao", "trafico", "homicidio", "guarda municipal", "penal", "delito", "feminicidio", "estupro"]},
+    "saude": {"nome": "Saúde", "palavras": ["saude", "sus", "hospital", "medico", "medica", "vacina", "medicamento", "enfermag", "upa", "doenca", "tratamento", "cancer", "autismo", "deficiencia", "atencao basica", "farmacia"]},
+    "educacao": {"nome": "Educação", "palavras": ["educacao", "escola", "ensino", "professor", "aluno", "estudante", "universidade", "creche", "merenda", "piso do magisterio", "alfabetizacao"]},
+    "economia": {"nome": "Economia", "palavras": ["economia", "inflacao", "preco", "credito", "empresa", "microempreendedor", "comercio", "industria", "investimento", "juros", "custo de vida"]},
+    "desemprego": {"nome": "Trabalho e emprego", "palavras": ["emprego", "trabalhador", "trabalho", "salario", "jornada", "escala 6x1", "clt", "renda", "aposentad", "previdencia"]},
+    "corrupcao": {"nome": "Corrupção e transparência", "palavras": ["corrupcao", "improbidade", "transparencia", "licitacao", "acesso a informacao", "fiscalizacao", "lavagem"]},
+    "fome": {"nome": "Fome e pobreza", "palavras": ["fome", "seguranca alimentar", "cesta basica", "bolsa familia", "pobreza", "vulnerabilidade", "assistencia social", "restaurante popular"]},
+    "impostos": {"nome": "Impostos", "palavras": ["imposto", "tributo", "tributario", "icms", "ipva", "isencao", "aliquota", "imposto de renda"]}
+  },
+  "homenagem": ["denomina", "dia estadual", "dia nacional", "dia municipal", "semana estadual", "semana nacional", "titulo de cidadao", "cidadania honoraria", "cidadao honorario", "utilidade publica", "patrimonio cultural", "patrimonio imaterial", "calendario oficial", "homenage", "medalha", "comenda", "capital nacional", "capital estadual", "inscreve o nome"]
+}
