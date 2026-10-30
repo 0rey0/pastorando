@@ -126,7 +126,7 @@ def _texto_pdf(bruto):
 
 VERBOS_EMENTA = (r"Disp[õo]e|Institui|Altera|Cria|Denomina|Declara|Concede|Autoriza|Estabelece|Pro[íi]be|Obriga|Assegura|Garante|Reconhece|"
                  r"Acrescenta|Revoga|Torna|Inclui|Regulamenta|Determina|Considera|Modifica|Disciplina|Fixa|Inscreve|Indica|Sugere|Solicita|Requer|Prorroga|Ratifica|Aprova")
-PARSER = 2  # suba este número quando o leitor de PDF mudar: os PDFs que não deram certo são lidos de novo
+PARSER = 3  # suba este número quando o leitor de PDF mudar: os PDFs que não deram certo são lidos de novo
 
 
 def _limpa_autor(a):
@@ -140,7 +140,7 @@ def ler_proposicao(texto):
     t = re.sub(r"[ \t]+", " ", texto or "")
     if len(t.strip()) < 30:
         return None
-    autor = re.search(r"Autor(?:ia|\(a\)|es)?\s*:\s*(.+)", t, flags=re.I)
+    autor = re.search(r"Autor(?:ia|\(a\)|es)?\s*:\s*(.+)", t, flags=re.I)  # "Autor: 100096 - DEPUTADO SIMAO PEDRO"
     autor = autor.group(1) if autor else None
     if not autor:
         m = re.search(r"((?:Deputad[oa]|Dep\.)\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][^\n,;]{2,60})", t)
@@ -150,13 +150,18 @@ def ler_proposicao(texto):
             autor = "Poder Executivo"
     ementa = re.search(r"Ementa\s*:\s*(.+?)(?:\n\s*\n|EXMO|Excelent|Senhor Presidente|Sala das|A ASSEMBLEIA|$)", t, flags=re.S | re.I)
     em = ementa.group(1) if ementa else None
+    if not em:  # modelo do sistema de assinatura da ALECE: "Descrição: DISPÕE SOBRE ..."
+        d = re.search(r"Descri[çc][ãa]o\s*:\s*(.+)", t, flags=re.I)
+        if d:
+            em = re.sub(r"^(?:PROJETO DE (?:LEI|INDICA[ÇC][ÃA]O)(?: COMPLEMENTAR)?|INDICA[ÇC][ÃA]O|PROPOSTA DE EMENDA [^Q]*?)\s+QUE\s+", "", d.group(1).strip(), flags=re.I)
     if not em or len(em.strip()) < 12 or em.strip()[:1] in "“\"'":
         m = re.search(r"((?:%s)\b.{10,600}?(?:providências|\.\s*\n|\.\s+(?=[A-ZÁÉÍÓÚ])))" % VERBOS_EMENTA, t, flags=re.S)
         em = m.group(1) if m else em
-    data = re.search(r"(?:Data de autua[cç][aã]o|Data de apresenta[cç][aã]o|Data)\s*:?\s*(\d{2})/(\d{2})/(\d{4})", t, flags=re.I)
+    data = re.search(r"(?:Data de autua[cç][aã]o|Data de apresenta[cç][aã]o|Data da cria[cç][aã]o|Data)\s*:?\s*(\d{2})/(\d{2})/(\d{4})", t, flags=re.I)
     if not autor or not em:
         return None
     em = re.sub(r"\s+", " ", em).strip().strip("“”\"").strip()
+    em = re.sub(r"\?([^?]{2,80})\?", r"“\1”", em)  # aspas que viraram "?" no PDF
     if len(em) < 12:
         return None
     return {"autor": _limpa_autor(autor), "ementa": em[:1].upper() + em[1:].lower() if em.isupper() else em,
