@@ -17,6 +17,7 @@ SITE = "https://transparencia.al.ce.gov.br"
 TETO_MENSAL = 36184.18  # Resolução 762/2023 e Ato Normativo 340/2023 (valor-base por gabinete)
 TRAMIT = "https://www2.al.ce.gov.br/legislativo/tramit%d/%s%d_%02d.pdf"
 TIPOS = {"pl": "PL", "pi": "Indicação", "plc": "PLC", "pec": "PEC"}
+PREFIXOS_MENSAGEM = ["msg", "mens", "men", "m", "ms", "mg"]  # palpites para o endereço das mensagens do governador
 VDP_PAG = "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar"
 
 
@@ -168,12 +169,30 @@ def ler_proposicao(texto):
             "data": "%s-%s-%s" % (data.group(3), data.group(2), data.group(1)) if data else ""}
 
 
+def _existe(url):
+    try:
+        return get(url, tipo="bytes", aceitar="application/pdf", tentativas=1, timeout=30)[:4] == b"%PDF"
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def proposicoes(ano, max_baixar=400, falhas_seguidas=20):
     """Varre os PDFs de tramitação (pl1_26.pdf, pl2_26.pdf...) e guarda o que já leu em dados/alece_proposicoes.json.
     Os PDFs que existem mas não deram para ler ficam anotados em '_sem_texto' e são lidos de novo quando o leitor melhora."""
     banco = ler("alece_proposicoes.json", {}) or {}
     doano = banco.setdefault(str(ano), {})
     sem = doano.setdefault("_sem_texto", {})
+    # as mensagens do governador têm outro prefixo no endereço; descobre qual é uma vez e guarda
+    pref = doano.setdefault("_prefixo", {})
+    if "mensagem" not in pref and pref.get("mensagem_tentou", 0) < 3:
+        pref["mensagem_tentou"] = pref.get("mensagem_tentou", 0) + 1
+        for cand in PREFIXOS_MENSAGEM:
+            if any(_existe(TRAMIT % (ano, cand, k, ano % 100)) for k in (1, 2, 3, 5, 8)):
+                pref["mensagem"] = cand
+                break
+        DIAG["alece_prefixo_mensagem"] = pref.get("mensagem")
+    if pref.get("mensagem"):
+        TIPOS[pref["mensagem"]] = "Mensagem"
     for tipo in TIPOS:
         ja = doano.setdefault(tipo, {})
         ruins = sem.setdefault(tipo, {})
@@ -223,13 +242,14 @@ def projetos_por_autor(doano, pessoas, ano):
     for tipo, itens in doano.items():
         if tipo.startswith("_"):
             continue
+        rotulo = "Mensagem" if TIPOS.get(tipo) == "Mensagem" else None
         for n, info in itens.items():
             em = info["ementa"]
             hom = homenagem(em)
-            pr = {"tipo": TIPOS.get(tipo, tipo.upper()), "numero": "%s/%d" % (n, ano), "ano": ano, "ementa": em, "data": info.get("data"),
+            pr = {"tipo": rotulo or TIPOS.get(tipo, tipo.upper()), "numero": "%s/%d" % (n, ano), "ano": ano, "ementa": em, "data": info.get("data"),
                   "temas": classificar(em), "homenagem": hom, "url": info["url"]}
             autor = norm(_limpa_autor(info["autor"]))
-            if "executivo" in autor or "governador" in autor:
+            if rotulo or "executivo" in autor or "governador" in autor:
                 executivo.append(pr)
                 continue
             partes = re.split(r",| e |;|/", re.sub(r"^(deputad[oa]s?|dep\.?)\s+", "", autor))
