@@ -1,1 +1,1 @@
-{"dados": [{"tipoVoto": "Abstenção", "deputado_": {"id": 900, "siglaUf": "CE"}}, {"tipoVoto": "Sim", "deputado_": {"id": 901, "siglaUf": "CE"}}, {"tipoVoto": "Sim", "deputado_": {"id": 902, "siglaUf": "CE"}}, {"tipoVoto": "Sim", "deputado_": {"id": 903, "siglaUf": "CE"}}]}
+{"dados": [{"tipoVoto": "Sim", "deputado_": {"id": 900, "siglaUf": "CE"}}, {"tipoVoto": "Não", "deputado_": {"id": 901, "siglaUf": "CE"}}, {"tipoVoto": "Sim", "deputado_": {"id": 902, "siglaUf": "CE"}}, {"tipoVoto": "Abstenção", "deputado_": {"id": 903, "siglaUf": "CE"}}]}

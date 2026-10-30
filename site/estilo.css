@@ -226,3 +226,40 @@ footer b{font-family:var(--titulo);font-size:18px;display:block;opacity:1}
 .carregando{padding:40px 0;text-align:center;color:var(--tinta-2)}
 .av{position:relative}
 .av img{position:absolute;inset:0;z-index:1}
+
+/* v2: ⓘ fonte oficial, redes, lados da Régua */
+.fi{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:4px;border-radius:50%;color:var(--tinta-2);vertical-align:-5px;text-decoration:none;flex:none}
+.fi svg{width:17px;height:17px;stroke-width:2.2}
+.fi:hover,.fi:focus-visible{color:var(--mar);background:var(--mar-suave)}
+.q .fi{margin-left:2px}
+.redes{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.rchip{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;border:1.5px solid var(--linha);background:var(--cartao);color:var(--tinta);text-decoration:none}
+.rchip svg{width:15px;height:15px;color:var(--mar)}
+.rchip small{font-weight:400;color:var(--tinta-2)}
+.rchip.grande{font-size:15px;padding:9px 14px}
+.rchip:hover{border-color:var(--tinta)}
+.lado{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;white-space:nowrap;vertical-align:1px}
+.lado.a{background:var(--mar-suave);color:var(--mar)} .lado.c{background:var(--chita-suave);color:var(--chita)}
+.sug-tit{display:flex;align-items:center;gap:6px;padding:8px 12px 2px;font-size:13px;font-weight:700;color:var(--tinta-2)}
+.sug-tit svg{width:16px;height:16px}
+.ibtn .n.novo{background:#fff;color:var(--chita);box-shadow:0 0 0 2px var(--chita)}
+.mapa-r{width:100%;max-width:520px;display:block;margin:10px auto 0;font-family:var(--corpo)}
+.mapa-r .fundo-m{fill:var(--suave)} .mapa-r .eixo{stroke:var(--linha);stroke-dasharray:3 3}
+.mapa-r text{fill:var(--tinta-2);font-size:10px}
+.mapa-r circle{stroke:var(--cartao);stroke-width:1.5}
+.tab.comp th,.tab.comp td{padding:9px 8px;border-bottom:1px solid var(--linha);text-align:left;vertical-align:middle;font-size:15px}
+.tab.comp thead th a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tinta);font-weight:700}
+.tab.comp tbody th{color:var(--tinta-2);font-weight:400;width:32%}
+.tab.comp .av{width:34px;height:34px;font-size:13px}
+.det li > span:last-child{display:inline-flex;align-items:center;gap:2px;justify-content:flex-end}
+.det li svg.i{width:18px;height:18px;vertical-align:-4px;color:var(--tinta-2)}
+.ev .fi{margin-left:auto}
+code{font-size:.9em;background:var(--suave);padding:1px 5px;border-radius:5px}
+.grade{grid-template-columns:repeat(3,1fr)}
+@media (min-width:600px){ .grade{grid-template-columns:repeat(4,1fr)} }
+.det li > span:only-child{display:block;text-align:left;flex:1;min-width:0}
+.det li > span:first-child{min-width:0}
+html,body{overflow-x:hidden}
+.det li{align-items:flex-start}
+.voto{align-self:flex-start;flex:none}
+.tab.comp .nota{display:inline-grid}

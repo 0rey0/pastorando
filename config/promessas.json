@@ -1,0 +1,13 @@
+{
+  "_leia": "Prometômetro. O TSE só guarda plano de governo de governador; as promessas dos parlamentares vêm da campanha (redes, site, horário eleitoral, entrevistas). Cada promessa precisa de um link de prova. 'quem' é o nome como aparece no site. status: cumprida, andamento, parada, contrariada ou aguardando. 'prova_status' é o link que comprova o status.",
+  "itens": [
+    {
+      "quem": "EXEMPLO - apague esta linha",
+      "promessa": "Texto da promessa como foi dita",
+      "fonte": "https://link-do-post-ou-video",
+      "data": "2026-09-15",
+      "status": "aguardando",
+      "prova_status": ""
+    }
+  ]
+}

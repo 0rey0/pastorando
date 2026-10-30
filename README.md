@@ -1,60 +1,77 @@
 # Pastorando
 
-**O povo pastorando o poder.** Gastos, votos, projetos e a Régua do Povo dos deputados estaduais, deputados federais e senadores do Ceará, com dados oficiais atualizados todo dia por um robô.
+**O povo pastorando o poder.** Gastos, votos, projetos, presença, viagens, emendas, campanha e a Régua do Povo dos deputados estaduais, deputados federais, senadores e do governo do Ceará. São dados oficiais, atualizados todo dia por um robô.
 
-- Custo para manter: **R$ 0**. O site é estático (GitHub Pages) e o robô roda no GitHub Actions, gratuito para repositórios públicos.
-- Para usar: grátis, sem cadastro e sem rastreamento. A lista de "Seguindo" fica guardada no aparelho de cada pessoa.
+Ao lado de cada informação existe um **ⓘ** que leva ao site oficial de onde ela saiu.
 
-## Colocar no ar (uns 15 minutos, sem programar)
+- **Custo para manter: R$ 0.** O site é estático (GitHub Pages) e o robô roda no GitHub Actions, que é gratuito para repositórios públicos.
+- **Para usar:** grátis, sem cadastro e sem rastreamento. A lista de "Seguindo" fica guardada no aparelho de cada pessoa.
 
-1. Crie uma conta em [github.com](https://github.com) (grátis).
-2. Clique em **New repository**. Nome: `pastorando`. Marque **Public**. Clique em **Create repository**.
-3. Na página do repositório, clique em **uploading an existing file**. Arraste **todo o conteúdo** desta pasta (as pastas `coleta`, `config`, `site`, `testes` e os arquivos soltos). Clique em **Commit changes**.
-4. A pasta `.github` costuma ficar de fora no envio pelo navegador, porque começa com ponto. Confira se ela aparece no repositório. Se não aparecer:
-   - clique em **Add file → Create new file**;
-   - no nome, escreva `.github/workflows/atualizar.yml`;
-   - cole o conteúdo do arquivo de mesmo nome desta pasta e clique em **Commit changes**;
-   - repita o processo para `.github/workflows/testes.yml`.
-5. Vá em **Settings → Pages**. Em **Source**, escolha **GitHub Actions**.
-6. Vá em **Actions**, clique em **Atualizar dados e publicar o site** e depois em **Run workflow**.
-7. Espere de 5 a 15 minutos. O endereço aparece no resumo da execução: `https://SEU-USUARIO.github.io/pastorando/`.
+## Colocar no ar (sem programar)
 
-A partir daí, o robô roda sozinho todo dia às 6h17. Se uma fonte oficial sair do ar, o site continua com os últimos dados bons, e a página **Sobre** mostra qual fonte falhou.
+1. Crie uma conta em [github.com](https://github.com) e um repositório **público** chamado `pastorando`.
+2. Na página do repositório, clique em **Add file → Upload files**.
+3. Abra a pasta `pastorando` no computador. Selecione **tudo o que está dentro dela** (Ctrl+A no Windows, Cmd+A no Mac) e **arraste** para a página. Use o Chrome ou o Edge, porque eles mandam as pastas junto.
+4. Clique em **Commit changes**.
+5. Confira se a pasta `.github` apareceu no repositório. Se não apareceu, crie os dois arquivos à mão: **Add file → Create new file**, escreva o nome `.github/workflows/atualizar.yml`, cole o conteúdo e salve. Repita para `testes.yml`.
+6. Vá em **Settings → Pages**. Em **Source**, escolha **GitHub Actions**.
+7. Vá em **Actions → Atualizar dados e publicar o site → Run workflow**.
+8. Na primeira vez, a execução leva de 30 a 60 minutos, porque baixa os arquivos grandes do TSE. Nos dias seguintes, uns 10 minutos.
 
-**Endereço próprio (opcional e pago):** registre o domínio (por exemplo, `pastorando.com.br`) no [Registro.br](https://registro.br). Depois configure em **Settings → Pages → Custom domain**. É o único custo possível do projeto.
+## Opcional (tudo grátis)
 
-## De onde vêm os dados
+Cadastre estes itens em **Settings → Secrets and variables → Actions → New repository secret**:
 
-| Casa | Fonte | O que entra |
+| Nome | Para quê | Como conseguir |
 | --- | --- | --- |
-| Câmara (22 federais) | [API de dados abertos da Câmara](https://dadosabertos.camara.leg.br) | cota parlamentar, projetos, votações nominais do plenário |
-| Senado (3 senadores) | [API de dados abertos do Senado](https://legis.senado.leg.br/dadosabertos/docs/) e planilha do CEAPS | cota, projetos, votações |
-| Assembleia (46 estaduais) | [Portal da Transparência da ALECE](https://transparencia.al.ce.gov.br) | Verba de Desempenho Parlamentar (CSV mensal) e votações nominais (planilhas) |
+| `TELEGRAM_TOKEN` | Robô que posta as novas votações num canal | No Telegram, fale com `@BotFather` e use `/newbot` |
+| `TELEGRAM_CANAL` | Nome do canal público, por exemplo `@pastorandoce` | Crie o canal e coloque o robô como administrador |
+| `PORTAL_CHAVE` | Plano B para as emendas, caso o arquivo do Portal falhe | [Cadastro da API do Portal da Transparência](https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email) |
 
-## Régua do Povo (automática)
+## De onde vem cada dado
 
-Ninguém escolhe os pesos à mão. Eles vêm de pesquisas de opinião registradas em `config/pesquisas.json`:
+| O quê | Fonte oficial |
+| --- | --- |
+| Gastos, projetos, votos, presença e viagens dos deputados federais | [Câmara, dados abertos](https://dadosabertos.camara.leg.br) e arquivo anual da cota |
+| Gastos, projetos, votos e viagens dos senadores | [Senado, dados abertos](https://legis.senado.leg.br/dadosabertos/docs/) e planilha do CEAPS |
+| Gastos e votos dos deputados estaduais | [Portal da Transparência da ALECE](https://transparencia.al.ce.gov.br) (Verba de Desempenho e votações nominais) |
+| Projetos dos deputados estaduais e do governador | PDFs de tramitação da ALECE (`www2.al.ce.gov.br/legislativo/tramitANO/`) |
+| Fotos, partido, redes sociais, bens, votos por cidade, quem bancou a campanha, eleitos de 2026, plano de governo | [TSE, dados abertos](https://dadosabertos.tse.jus.br) |
+| Emendas parlamentares | [Portal da Transparência, CGU](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares) |
+| Para onde vai o dinheiro do estado | [Tesouro Nacional, Siconfi](https://apidatalake.tesouro.gov.br/docs/siconfi/) (RREO, despesa por função) |
 
-- **Peso de cada parte da nota**: o que o eleitor diz que mais pesa no voto (Quaest, set/2026). Fica em honestidade 37, compromisso 34 e prioridades do povo 29.
-- **Peso de cada tema dentro de "prioridades do povo"**: o que a população aponta como maior problema. Para a Assembleia, a referência é a Quaest Ceará (set/2026), com violência em 54%. Para Câmara e Senado, é o Datafolha (out/2026).
+## Régua do Povo
 
-As três partes da nota:
+A nota não usa pesquisa de opinião. Ela segue regras públicas, que estão em `config/regua.json`, e **privilegia quem defende serviços públicos e direitos do povo trabalhador**. São cinco partes:
 
-1. **Honestidade com o dinheiro público**: quanto gasta comparado aos colegas da mesma Casa e se concentra os gastos num só fornecedor.
-2. **Compromisso e presença**: em quantas votações nominais votou.
-3. **Trabalho nas prioridades do povo**: projetos apresentados, valendo mais os temas que a população mais cobra. Homenagens valem zero.
+| Parte | Peso | Como é medida |
+| --- | --- | --- |
+| Votos a favor do povo | 35 | Nas votações sobre SUS, escola pública, salário, moradia e direitos, votar SIM conta ponto. Nas votações de privatização, retirada de direitos ou benefício aos mais ricos, votar NÃO conta ponto. |
+| Projetos a favor do povo | 25 | Projetos que ampliam serviços e direitos somam; projetos de privatização ou retirada de direitos subtraem. Homenagens não contam. |
+| Cuidado com o dinheiro público | 15 | Gasto da verba comparado aos colegas, concentração num só fornecedor e quanto das emendas foi para saúde, educação, assistência e outros serviços. |
+| Presença e participação | 15 | Presença no plenário. Quando a Casa não publica, conta a participação nas votações nominais. |
+| Independência do dinheiro grande | 10 | Campanha de doações pequenas pontua mais; grandes doadores e autofinanciamento pontuam menos. |
 
-A nota só aparece quando há pelo menos duas partes calculadas; antes disso, o deputado aparece "em observação".
+- **Como mudar as regras:** edite as listas de palavras em `config/regua.json`.
+- **Como corrigir uma votação mal classificada:** use `config/votacoes_manuais.json` e escreva o motivo.
+- **Como registrar promessas de campanha:** use `config/promessas.json`, sempre com o link da prova.
+- **Quando a nota aparece:** só com pelo menos três partes calculadas. Cada pessoa é comparada apenas com colegas da mesma Casa.
 
-Quando sair pesquisa nova, basta editar `config/pesquisas.json` pelo próprio GitHub. A nota se recalcula na rodada seguinte. Para ligar uma votação a uma pesquisa sobre o mesmo assunto (por exemplo, a maioria a favor do fim da escala 6x1), preencha `votos_com_o_povo` nesse mesmo arquivo.
+## Avisos
+
+- Cada político tem um feed RSS em `feeds/ID.xml`.
+- O site avisa no próprio aparelho quando há novidade de quem a pessoa segue.
+- Há um canal no Telegram, se você configurar os segredos da seção "Opcional".
+
+## O que depende da primeira rodada
+
+Os robôs foram testados sem internet, com respostas no mesmo formato das fontes oficiais. Se alguma fonte tiver mudado de formato, o site continua no ar com os últimos dados bons. A página **Dados abertos** mostra qual fonte falhou, e o erro detalhado aparece na aba **Actions**.
+
+Os projetos da ALECE são lidos aos poucos: até 350 novos por tipo a cada dia. O ano inteiro entra em poucos dias.
 
 ## Para quem programa
 
-- `coleta/`: robôs em Python, só com a biblioteca padrão (mais `openpyxl` para as planilhas da ALECE).
-- `site/`: HTML, CSS e JavaScript puros. Lê `site/dados/*.json`.
-- `python testes/teste_coleta.py`: testa tudo sem internet, com respostas no formato das APIs oficiais.
-- Para rodar localmente: `python coleta/rodar.py` e depois `cd site && python -m http.server`.
-
-## Próximos passos
-
-Governador (Ceará Transparente), presença nas sessões, promessas de campanha, viagens, emendas por cidade (Portal da Transparência), dados do TSE e avisos por Telegram.
+- `coleta/`: os robôs, em Python. Usam `openpyxl`, `pypdf` e `Pillow`.
+- `site/`: HTML, CSS e JavaScript puros. O site lê os arquivos de `site/dados/`.
+- Testes sem internet: `pip install -r requirements.txt reportlab` e depois `python testes/teste_coleta.py`.
+- Para rodar no seu computador: `python coleta/rodar.py` e depois `cd site && python -m http.server`.

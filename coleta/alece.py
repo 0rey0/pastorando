@@ -8,12 +8,16 @@ import html as htmllib
 import io
 import re
 
-from comum import achar_coluna, classificar, get, ler_csv, norm, numero_br, resumir_gastos, slug
+from comum import (achar_coluna, casar_nome, classificar, config, fonte, get, homenagem, lado_povo, ler, ler_csv, norm, numero_br,
+                   resumir_gastos, salvar, slug)
 
 URL = "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar/csv"
 PAG_VOT = "https://transparencia.al.ce.gov.br/consultas-gerais/votacao-nominal"
 SITE = "https://transparencia.al.ce.gov.br"
 TETO_MENSAL = 36184.18  # Resolução 762/2023 e Ato Normativo 340/2023 (valor-base por gabinete)
+TRAMIT = "https://www2.al.ce.gov.br/legislativo/tramit%d/%s%d_%02d.pdf"
+TIPOS = {"pl": "PL", "pi": "Indicação", "plc": "PLC", "pec": "PEC"}
+VDP_PAG = "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar"
 
 
 def nome_limpo(n):
@@ -97,12 +101,93 @@ def votacoes(ids, maximo=80):
                 if pid and cel[c_voto].strip():
                     votos[pid] = cel[c_voto].strip().capitalize()
         if votos:
-            materia = re.sub(r"^.*?\d{2}/\d{2}/\d{4}", "", texto).strip()[:200] or texto[:200]
+            celulas = [htmllib.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", c))).strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", linha, flags=re.S | re.I)]
+            celulas = [c for c in celulas if c and not re.fullmatch(r"(\d{1,2}ª|\d{2}/\d{2}/\d{4}|baixar|download|xlsx|planilha|csv)", c, flags=re.I)]
+            materia = (max(celulas, key=len) if celulas else re.sub(r"(?i)\b(baixar|download)\b", "", texto)).strip()[:200]
+            texto = materia
             out.append({"id": "a" + slug(url)[-40:], "casa": "alece", "data": "%s-%s-%s" % (dt.group(3), dt.group(2), dt.group(1)) if dt else "",
                         "titulo": materia, "descricao": texto[:400], "temas": classificar(texto), "votos": votos, "url": url})
         if len(out) >= maximo:
             break
     return out
+
+
+def _texto_pdf(bruto):
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return ""
+    try:
+        r = PdfReader(io.BytesIO(bruto))
+        return "\n".join((pg.extract_text() or "") for pg in r.pages[:2])
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def ler_proposicao(texto):
+    """Do PDF de tramitação: número, data, autor e ementa."""
+    t = re.sub(r"[ \t]+", " ", texto)
+    autor = re.search(r"Autor(?:ia)?\s*:\s*(.+)", t)
+    ementa = re.search(r"Ementa\s*:\s*(.+?)(?:\n\s*\n|EXMO|Excelent|Senhor Presidente|Sala das|$)", t, flags=re.S | re.I)
+    data = re.search(r"Data de autua[cç][aã]o\s*:?\s*(\d{2})/(\d{2})/(\d{4})", t, flags=re.I)
+    if not autor or not ementa:
+        return None
+    em = re.sub(r"\s+", " ", ementa.group(1)).strip()
+    return {"autor": re.sub(r"\s+", " ", autor.group(1)).strip().title(), "ementa": em[:1].upper() + em[1:].lower() if em.isupper() else em,
+            "data": "%s-%s-%s" % (data.group(3), data.group(2), data.group(1)) if data else ""}
+
+
+def proposicoes(ano, max_novas=350, falhas_seguidas=15):
+    """Varre os PDFs de tramitação (pl1_26.pdf, pl2_26.pdf...) e guarda o que já leu em dados/alece_proposicoes.json."""
+    banco = ler("alece_proposicoes.json", {}) or {}
+    doano = banco.setdefault(str(ano), {})
+    for tipo in TIPOS:
+        ja = doano.setdefault(tipo, {})
+        n = max([int(k) for k in ja] or [0]) + 1
+        falhas = novas = 0
+        while falhas < falhas_seguidas and novas < max_novas:
+            url = TRAMIT % (ano, tipo, n, ano % 100)
+            try:
+                bruto = get(url, tipo="bytes", aceitar="application/pdf", tentativas=2)
+            except Exception:  # noqa: BLE001
+                falhas += 1
+                n += 1
+                continue
+            info = ler_proposicao(_texto_pdf(bruto))
+            falhas = 0
+            if info:
+                info["url"] = url
+                ja[str(n)] = info
+                novas += 1
+            n += 1
+        print("  ALECE %s %d: %d no total, %d novas" % (tipo, ano, len(ja), novas))
+    salvar("alece_proposicoes.json", banco)
+    return doano
+
+
+def projetos_por_autor(doano, pessoas, ano):
+    """Liga cada proposição ao(s) deputado(s) autor(es). Devolve {pid: [projetos]} e a lista do Poder Executivo."""
+    por, executivo = {p["id"]: [] for p in pessoas}, []
+    for tipo, itens in doano.items():
+        for n, info in itens.items():
+            em = info["ementa"]
+            hom = homenagem(em)
+            lado, palavra = lado_povo(em)
+            pr = {"tipo": TIPOS.get(tipo, tipo.upper()), "numero": "%s/%d" % (n, ano), "ano": ano, "ementa": em, "data": info.get("data"),
+                  "temas": classificar(em), "homenagem": hom, "lado": 0 if hom else lado, "palavra": None if hom else palavra, "url": info["url"]}
+            autor = norm(info["autor"])
+            if "executivo" in autor or "governador" in autor:
+                executivo.append(pr)
+                continue
+            partes = re.split(r",| e |;|/", re.sub(r"^(deputad[oa]s?|dep\.?)\s+", "", autor))
+            for parte in partes:
+                alvo, nota = casar_nome(parte, pessoas, chave=lambda p: [p["nome"]] + ([p["nome_urna"]] if p.get("nome_urna") else []), minimo=0.67)
+                if alvo:
+                    por[alvo["id"]].append(pr)
+    for v in por.values():
+        v.sort(key=lambda x: (x.get("data") or "", x["numero"]), reverse=True)
+    executivo.sort(key=lambda x: (x.get("data") or "", x["numero"]), reverse=True)
+    return por, executivo
 
 
 def coletar(ano=None):
@@ -120,8 +205,15 @@ def coletar(ano=None):
         g = resumir_gastos(itens)
         g["teto_periodo"] = round(TETO_MENSAL * max(1, len(g["meses"])), 2)
         g["pct_teto"] = round(100 * g["total"] / g["teto_periodo"], 1) if g["teto_periodo"] else None
+        ultimo = max(g["meses"]) if g["meses"] else hoje.month
         pessoas.append({"id": "a-" + slug(nome), "casa": "alece", "nome": nome, "partido": None, "foto": None, "email": None,
-                        "link": "https://www.al.ce.gov.br/deputados", "gastos": g})
+                        "link": "https://www.al.ce.gov.br/deputados", "gastos": g, "redes": [],
+                        "fontes": {"perfil": fonte("Assembleia Legislativa do Ceará · deputados", "https://www.al.ce.gov.br/deputados"),
+                                   "gastos": fonte("ALECE · Portal da Transparência (Verba de Desempenho Parlamentar)", VDP_PAG + "?mes=%d&ano=%d" % (ultimo, ano)),
+                                   "gastos_dados": fonte("ALECE · CSV da Verba de Desempenho (%02d/%d)" % (ultimo, ano), URL + "?mes=%d&ano=%d" % (ultimo, ano)),
+                                   "teto": fonte("ALECE · Resolução 762/2023 (valor da verba)", "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar"),
+                                   "votos": fonte("ALECE · votações nominais", PAG_VOT),
+                                   "projetos": fonte("ALECE · proposições em tramitação (PDF de cada uma)", "https://www.al.ce.gov.br/legislativo")}})
     print("ALECE: %d deputados com Verba de Desempenho em %d" % (len(pessoas), ano))
     vots = []
     try:
@@ -130,3 +222,19 @@ def coletar(ano=None):
         print("  votações da ALECE falharam:", e)
     print("ALECE: %d votações nominais" % len(vots))
     return pessoas, vots
+
+
+def completar(pessoas, ano=None):
+    """Depois do TSE: liga projetos da ALECE aos autores e devolve os projetos enviados pelo governador."""
+    ano = ano or datetime.date.today().year
+    alece = [p for p in pessoas if p["casa"] == "alece"]
+    try:
+        doano = proposicoes(ano)
+    except Exception as e:  # noqa: BLE001
+        print("  proposições da ALECE falharam:", e)
+        return []
+    por, executivo = projetos_por_autor(doano, alece, ano)
+    if any(por.values()):
+        for p in alece:
+            p["projetos"] = por.get(p["id"], [])
+    return executivo
