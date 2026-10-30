@@ -17,6 +17,7 @@ import governo  # noqa: E402
 import municipios  # noqa: E402
 import noticias  # noqa: E402
 import radar  # noqa: E402
+import comum  # noqa: E402
 import senado  # noqa: E402
 import tse  # noqa: E402
 from comum import agora, casar_nome, config, ler, salvar  # noqa: E402
@@ -121,7 +122,7 @@ def principal():
         salvar("eleicao.json", {"eleitos2026": pacote.get("eleitos2026", []), "governo": pacote.get("governo", {}), "fontes": pacote.get("fontes", {}),
                                 "quando": pacote.get("quando")})
     salvar("meta.json", {"atualizado": agora(), "fontes": status, "site": avisos.endereco_site(),
-                         "telegram": avisos.canal_publico(), "repositorio": os.environ.get("GITHUB_REPOSITORY")})
+                         "telegram": avisos.canal_publico(), "diagnostico": comum.DIAG, "repositorio": os.environ.get("GITHUB_REPOSITORY")})
     print("\nPronto: %d parlamentares, %d votações." % (len(pessoas), len(votacoes)))
     return 0 if any(s.get("ok") for k, s in status.items() if k in ("camara", "senado", "alece")) else 1
 

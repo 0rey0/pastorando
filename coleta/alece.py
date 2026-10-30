@@ -8,7 +8,7 @@ import html as htmllib
 import io
 import re
 
-from comum import (achar_coluna, casar_nome, classificar, config, fonte, get, homenagem, ler, ler_csv, norm, numero_br,
+from comum import (DIAG, achar_coluna, casar_nome, classificar, config, fonte, get, homenagem, ler, ler_csv, norm, numero_br,
                    resumir_gastos, salvar, slug)
 
 URL = "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar/csv"
@@ -204,6 +204,9 @@ def proposicoes(ano, max_baixar=400, falhas_seguidas=20):
                 novas += 1
             else:
                 ruins[str(k)] = PARSER
+                am = DIAG.setdefault("alece_pdf_sem_texto", [])
+                if len(am) < 4:
+                    am.append({"url": url, "bytes": len(bruto), "inicio": bruto[:8].decode("latin-1"), "texto": _texto_pdf(bruto)[:700]})
         print("  ALECE %s %d: %d lidos, %d sem texto, %d novos nesta rodada" % (tipo, ano, len(ja), len(ruins), novas))
     salvar("alece_proposicoes.json", banco)
     return {k: v for k, v in doano.items() if not k.startswith("_")}

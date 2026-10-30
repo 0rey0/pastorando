@@ -3,9 +3,11 @@
 API de pesquisas do IBGE: https://servicodados.ibge.gov.br/api/docs/pesquisas
 O IDHM é do Atlas do Desenvolvimento Humano (PNUD, Ipea, FJP), publicado pelo IBGE Cidades.
 """
+import json
+import os
 import time
 
-from comum import agora, fonte, get, ler, norm, salvar, slug
+from comum import DIAG, RAIZ, agora, fonte, get, ler, norm, salvar, slug
 
 LOCAIS = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/23/municipios"
 # o mesmo endereço que o IBGE Cidades usa (não precisa saber a pesquisa); o segundo é o caminho antigo, por pesquisa
@@ -40,7 +42,7 @@ def _baixar(pesq, ind, lote):
     erro = None
     for url in (API % (ind, lote), API_PESQ % (pesq, ind, lote)):
         try:
-            return get(url)
+            return get(url, timeout=45, tentativas=2)
         except Exception as e:  # noqa: BLE001
             erro = e
     raise erro
@@ -56,14 +58,19 @@ def _resultados(pesq, inds, codigos):
 
 
 def _resultados_um(pesq, ind, codigos):
-    out = {}
+    out, erros = {}, 0
     seis = sorted({c[:6] for c in codigos})
     for i in range(0, len(seis), 40):
         lote = "|".join(seis[i:i + 40])
         try:
             j = _baixar(pesq, ind, lote)
+            erros = 0
         except Exception as e:  # noqa: BLE001
             print("  IBGE indicador %s falhou: %s" % (ind, e))
+            DIAG.setdefault("ibge_erros", {})[str(ind)] = str(e)[:160]
+            erros += 1
+            if erros >= 2 and not out:
+                break  # o IBGE não está respondendo esse indicador; tenta o próximo
             continue
         for bloco in j if isinstance(j, list) else [j]:
             for r in bloco.get("res", []):
@@ -90,8 +97,15 @@ def coletar(pessoas, forcar=False):
         base = velho
         print("Municípios: usando indicadores guardados de", velho.get("quando"))
     else:
-        locais = get(LOCAIS)
-        nomes = {str(m["id"]): m["nome"] for m in locais}
+        try:
+            locais = get(LOCAIS, timeout=40, tentativas=3)
+            nomes = {str(m["id"]): m["nome"] for m in locais}
+        except Exception as e:  # noqa: BLE001 - plano B: os códigos do IBGE que estão no mapa do site
+            print("  lista de cidades do IBGE falhou (%s); usando o mapa do site" % e)
+            DIAG["ibge_localidades"] = str(e)[:200]
+            with open(os.path.join(RAIZ, "site", "mapa-ce.json"), encoding="utf-8") as f:
+                mapa = json.load(f)["municipios"]
+            nomes = {str(m["ibge"]): n for n, m in mapa.items() if m.get("ibge")}
         cods = sorted(nomes)
         muni = {nomes[c]: {"ibge": c} for c in cods}
         anos = {}

@@ -2,7 +2,7 @@
 import datetime
 import re
 
-from comum import (achar_coluna, baixar, classificar, fonte, foto_existente, get, homenagem, linhas_csv_zip, norm,
+from comum import (DIAG, achar_coluna, baixar, classificar, fonte, foto_existente, get, homenagem, linhas_csv_zip, norm,
                    numero_br, resumir_gastos, salvar_foto)
 
 BASE = "https://dadosabertos.camara.leg.br/api/v2"
@@ -91,7 +91,7 @@ def presenca(id_, ano):
             "pct": round(100 * pres / total, 1), "url": SITE + "/deputados/%s/presenca-plenario/%d" % (id_, ano)}
 
 
-def viagens(ano, ids):
+def viagens(ano, ids, nomes=None):
     """Trechos de passagens aéreas pagas pela cota (arquivo anual da Câmara). Devolve {id: [viagens]}."""
     try:
         caminho = baixar(COTAS % ano, "camara_cotas_%d.zip" % ano, dias=1)
@@ -100,22 +100,35 @@ def viagens(ano, ids):
         return {}
     por, cab, idx = {}, None, {}
     alvo = {str(i) for i in ids}
+    por_nome = {norm(n): str(i) for i, n in (nomes or {}).items()}
+    dg = DIAG.setdefault("camara_viagens", {"linhas_ce": 0, "com_trecho": 0, "casadas": 0, "exemplo": None})
     for c, l in linhas_csv_zip(caminho, ".csv", filtro=lambda t: '"CE"' in t or ";CE;" in t):
         if c == "__cab__":
             cab = l
             idx = {k: achar_coluna(cab, *v) for k, v in {
                 "id": ("idecadastro",), "uf": ("sguf",), "trecho": ("txttrecho",), "data": ("datemissao",), "valor": ("vlrliquido",),
-                "forn": ("txtfornecedor",), "pass": ("txtpassageiro",), "tipo": ("txtdescricao",), "doc": ("urldocumento",)}.items()}
+                "forn": ("txtfornecedor",), "pass": ("txtpassageiro",), "tipo": ("txtdescricao",), "doc": ("urldocumento",),
+                "id2": ("nudeputadoid",), "nome": ("txnomeparlamentar",)}.items()}
+            dg["cabecalho"] = cab[:32]
             continue
         try:
-            if l[idx["uf"]] != "CE" or l[idx["id"]] not in alvo:
+            if l[idx["uf"]] != "CE":
                 continue
+            dg["linhas_ce"] += 1
+            quem = next((l[idx[k]] for k in ("id", "id2") if idx.get(k) is not None and l[idx[k]] in alvo), None)
+            if not quem and idx.get("nome") is not None:
+                quem = por_nome.get(norm(l[idx["nome"]]))
             tr = l[idx["trecho"]].strip() if idx["trecho"] is not None else ""
         except (IndexError, TypeError):
             continue
-        if not tr:
+        if tr:
+            dg["com_trecho"] += 1
+            if not dg["exemplo"]:
+                dg["exemplo"] = l[:32]
+        if not tr or not quem:
             continue
-        por.setdefault(l[idx["id"]], []).append({
+        dg["casadas"] += 1
+        por.setdefault(quem, []).append({
             "data": (l[idx["data"]] or "")[:10], "trecho": tr, "valor": numero_br(l[idx["valor"]]),
             "empresa": l[idx["forn"]].strip().title() if idx["forn"] is not None else "",
             "passageiro": l[idx["pass"]].strip().title() if idx["pass"] is not None else "",
@@ -178,7 +191,7 @@ def coletar(ano=None):
     ano = ano or hoje.year
     deps = deputados()
     print("Câmara: %d deputados do Ceará" % len(deps))
-    via = viagens(ano, [d["id"] for d in deps])
+    via = viagens(ano, [d["id"] for d in deps], {d["id"]: d.get("nome", "") for d in deps})
     pessoas = []
     for d in deps:
         id_ = d["id"]
