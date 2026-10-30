@@ -1,0 +1,14 @@
+{
+  "_leia": "Jornais que o robô lê para achar notícias sobre as pautas do Radar. Nenhum desses jornais tem API aberta: o robô usa o RSS público de cada um e a busca de notícias do Google filtrada pelo site do jornal. Só guardamos título, link, jornal e data; o texto fica no site do jornal.",
+  "dias": 30,
+  "maximo": 300,
+  "fontes": [
+    {"nome": "G1", "site": "g1.globo.com", "rss": ["https://g1.globo.com/rss/g1/politica/", "https://g1.globo.com/rss/g1/ce/ceara/"]},
+    {"nome": "Folha de S.Paulo", "site": "folha.uol.com.br", "rss": ["https://feeds.folha.uol.com.br/poder/rss091.xml"]},
+    {"nome": "Estadão", "site": "estadao.com.br", "rss": ["https://www.estadao.com.br/arc/outboundfeeds/feeds/rss/sections/politica/"]},
+    {"nome": "O Povo", "site": "opovo.com.br", "rss": []},
+    {"nome": "Diário do Nordeste", "site": "diariodonordeste.verdesmares.com.br", "rss": []}
+  ],
+  "busca_google_noticias": true,
+  "termos_gerais": ["extrema-direita", "extrema direita", "bolsonarismo", "bolsonarista"]
+}

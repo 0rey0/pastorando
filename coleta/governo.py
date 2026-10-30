@@ -83,8 +83,11 @@ def coletar(pacote_tse, executivo, votacoes_alece):
     if gv.get("eleito2026"):
         g["eleito2026"] = gv["eleito2026"]
     g["mensagens"] = executivo[:60]
-    g["mensagens_resumo"] = {"total": len(executivo), "a_favor": sum(1 for x in executivo if x["lado"] == 1),
-                             "contra": sum(1 for x in executivo if x["lado"] == -1)}
+    temas = {}
+    for x in executivo:
+        for t in x.get("temas") or ["outros"]:
+            temas[t] = temas.get(t, 0) + 1
+    g["mensagens_resumo"] = {"total": len(executivo), "por_tema": sorted(temas.items(), key=lambda kv: -kv[1])}
     g["fontes"] = {"mensagens": fonte("ALECE · proposições do Poder Executivo (PDF de cada uma)", "https://www.al.ce.gov.br/legislativo"),
                    "governador": fonte("TSE · candidatos %s" % ((gv.get("atual") or {}).get("ano") or 2022), (tse.get("fontes") or {}).get("2022", {}).get("candidatos")),
                    "portal": fonte("Ceará Transparente (portal do governo do estado)", "https://cearatransparente.ce.gov.br/")}

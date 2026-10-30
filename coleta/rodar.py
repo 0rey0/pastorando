@@ -1,4 +1,4 @@
-"""Roda todos os robôs, calcula a Régua e grava os arquivos que o site lê (site/dados/).
+"""Roda todos os robôs e grava os arquivos que o site lê (site/dados/).
 
 Se uma fonte falhar, os dados anteriores dela são mantidos e o problema aparece em meta.json.
 Uso: python coleta/rodar.py
@@ -14,7 +14,9 @@ import avisos  # noqa: E402
 import camara  # noqa: E402
 import emendas  # noqa: E402
 import governo  # noqa: E402
-import regua  # noqa: E402
+import municipios  # noqa: E402
+import noticias  # noqa: E402
+import radar  # noqa: E402
 import senado  # noqa: E402
 import tse  # noqa: E402
 from comum import agora, casar_nome, config, ler, salvar  # noqa: E402
@@ -29,6 +31,9 @@ NOMES_EXTRA = {
     "alece_projetos": "ALECE (proposições em tramitação)",
     "emendas": "Portal da Transparência (emendas parlamentares)",
     "governo": "Tesouro Nacional, Siconfi (orçamento do estado)",
+    "radar": "Radar do Retrocesso (Câmara e ALECE)",
+    "municipios": "IBGE Cidades (IDHM, renda, saúde, educação das cidades)",
+    "noticias": "Jornais (O Povo, Diário do Nordeste, Folha, Estadão, G1)",
 }
 
 
@@ -92,15 +97,18 @@ def principal():
         gov["promessas_manuais"] = promessas(pessoas, gov)
     else:
         promessas(pessoas, gov)
-    resumo = regua.calcular(pessoas, votacoes)
+    radar_antigo = ler("radar.json", {}) or {}
+    radar_novo = _etapa(status, "radar", radar.coletar, pessoas, votacoes)
+    _etapa(status, "municipios", municipios.coletar, pessoas)
+    _etapa(status, "noticias", noticias.coletar, pessoas, radar_novo or radar_antigo)
     votacoes.sort(key=lambda v: v.get("data") or "", reverse=True)
-    for chave in ("tse", "alece_projetos", "emendas", "governo"):
+    for chave in ("tse", "alece_projetos", "emendas", "governo", "radar", "municipios", "noticias"):
         if not status.get(chave, {}).get("ok"):
             ant = (meta_antiga.get("fontes") or {}).get(chave, {})
             status.setdefault(chave, {"nome": NOMES_EXTRA[chave], "ok": False})["ultimo_sucesso"] = ant.get("quando") if ant.get("ok") else ant.get("ultimo_sucesso")
     try:
         avisos.feeds(pessoas, votacoes)
-        enviados = avisos.telegram(pessoas, votacoes, antigas_v)
+        enviados = avisos.telegram(pessoas, votacoes, antigas_v) + avisos.telegram_radar(radar_novo, radar_antigo)
         if enviados:
             print("Telegram: %d votações avisadas" % enviados)
     except Exception:  # noqa: BLE001
@@ -112,7 +120,7 @@ def principal():
     if pacote:
         salvar("eleicao.json", {"eleitos2026": pacote.get("eleitos2026", []), "governo": pacote.get("governo", {}), "fontes": pacote.get("fontes", {}),
                                 "quando": pacote.get("quando")})
-    salvar("meta.json", {"atualizado": agora(), "fontes": status, "regua": resumo, "site": avisos.endereco_site(),
+    salvar("meta.json", {"atualizado": agora(), "fontes": status, "site": avisos.endereco_site(),
                          "telegram": avisos.canal_publico(), "repositorio": os.environ.get("GITHUB_REPOSITORY")})
     print("\nPronto: %d parlamentares, %d votações." % (len(pessoas), len(votacoes)))
     return 0 if any(s.get("ok") for k, s in status.items() if k in ("camara", "senado", "alece")) else 1

@@ -19,7 +19,7 @@ DADOS = os.path.join(RAIZ, "site", "dados")
 CONFIG = os.path.join(RAIZ, "config")
 FOTOS = os.path.join(RAIZ, "site", "fotos")
 CACHE = os.path.join(RAIZ, "cache")
-UA = "Pastorando/1.0 (plataforma civica de transparencia; github.com)"
+UA = "EspiaCE/1.0 (plataforma civica de transparencia; github.com)"
 
 # Em testes, este dicionário substitui a internet: {url_sem_parametros: caminho_do_arquivo}
 FALSO = {}
@@ -296,29 +296,6 @@ def classificar(texto):
 def homenagem(texto):
     t = norm(texto)
     return any(p in t for p in _temas()["homenagem"])
-
-
-_REGUA = None
-
-
-def _regua():
-    global _REGUA
-    if _REGUA is None:
-        _REGUA = config("regua.json")
-    return _REGUA
-
-
-def lado_povo(texto):
-    """Classifica um texto pela régua progressista: (+1, palavra) a favor do povo, (-1, palavra) contra, (0, None) neutro."""
-    t = " " + norm(texto) + " "
-    contra = next((p for p in _regua()["contra_o_povo"] if p in t), None)
-    favor = next((p for p in _regua()["a_favor_do_povo"] if re.search(r"(?<![a-z])" + re.escape(p) + r"(?:s|es)?(?![a-z])", t)), None)
-    inv = any(p in t for p in _regua().get("inversores", []))
-    if contra:
-        return (1 if inv else -1), contra
-    if favor:
-        return (-1 if inv and "revoga" in t else 1), favor
-    return 0, None
 
 
 def ler_csv(bruto):

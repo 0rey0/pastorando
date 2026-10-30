@@ -8,7 +8,7 @@ import html as htmllib
 import io
 import re
 
-from comum import (achar_coluna, casar_nome, classificar, config, fonte, get, homenagem, lado_povo, ler, ler_csv, norm, numero_br,
+from comum import (achar_coluna, casar_nome, classificar, config, fonte, get, homenagem, ler, ler_csv, norm, numero_br,
                    resumir_gastos, salvar, slug)
 
 URL = "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar/csv"
@@ -124,58 +124,103 @@ def _texto_pdf(bruto):
         return ""
 
 
+VERBOS_EMENTA = (r"Disp[õo]e|Institui|Altera|Cria|Denomina|Declara|Concede|Autoriza|Estabelece|Pro[íi]be|Obriga|Assegura|Garante|Reconhece|"
+                 r"Acrescenta|Revoga|Torna|Inclui|Regulamenta|Determina|Considera|Modifica|Disciplina|Fixa|Inscreve|Indica|Sugere|Solicita|Requer|Prorroga|Ratifica|Aprova")
+PARSER = 2  # suba este número quando o leitor de PDF mudar: os PDFs que não deram certo são lidos de novo
+
+
+def _limpa_autor(a):
+    a = re.sub(r"^\s*\d+\s*[-–]\s*", "", a)  # "99058 - Deputado Fulano" -> "Deputado Fulano"
+    a = re.sub(r"\s+", " ", a).strip(" .;:-")
+    return a.title() if a.isupper() else a
+
+
 def ler_proposicao(texto):
-    """Do PDF de tramitação: número, data, autor e ementa."""
-    t = re.sub(r"[ \t]+", " ", texto)
-    autor = re.search(r"Autor(?:ia)?\s*:\s*(.+)", t)
-    ementa = re.search(r"Ementa\s*:\s*(.+?)(?:\n\s*\n|EXMO|Excelent|Senhor Presidente|Sala das|$)", t, flags=re.S | re.I)
-    data = re.search(r"Data de autua[cç][aã]o\s*:?\s*(\d{2})/(\d{2})/(\d{4})", t, flags=re.I)
-    if not autor or not ementa:
+    """Do PDF de tramitação: autor, ementa e data. Aceita mais de um modelo de PDF."""
+    t = re.sub(r"[ \t]+", " ", texto or "")
+    if len(t.strip()) < 30:
         return None
-    em = re.sub(r"\s+", " ", ementa.group(1)).strip()
-    return {"autor": re.sub(r"\s+", " ", autor.group(1)).strip().title(), "ementa": em[:1].upper() + em[1:].lower() if em.isupper() else em,
+    autor = re.search(r"Autor(?:ia|\(a\)|es)?\s*:\s*(.+)", t, flags=re.I)
+    autor = autor.group(1) if autor else None
+    if not autor:
+        m = re.search(r"((?:Deputad[oa]|Dep\.)\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][^\n,;]{2,60})", t)
+        if m:
+            autor = m.group(1)
+        elif re.search(r"Poder Executivo|Governador(?:a)? do Estado|Mensagem n", t, flags=re.I):
+            autor = "Poder Executivo"
+    ementa = re.search(r"Ementa\s*:\s*(.+?)(?:\n\s*\n|EXMO|Excelent|Senhor Presidente|Sala das|A ASSEMBLEIA|$)", t, flags=re.S | re.I)
+    em = ementa.group(1) if ementa else None
+    if not em or len(em.strip()) < 12 or em.strip()[:1] in "“\"'":
+        m = re.search(r"((?:%s)\b.{10,600}?(?:providências|\.\s*\n|\.\s+(?=[A-ZÁÉÍÓÚ])))" % VERBOS_EMENTA, t, flags=re.S)
+        em = m.group(1) if m else em
+    data = re.search(r"(?:Data de autua[cç][aã]o|Data de apresenta[cç][aã]o|Data)\s*:?\s*(\d{2})/(\d{2})/(\d{4})", t, flags=re.I)
+    if not autor or not em:
+        return None
+    em = re.sub(r"\s+", " ", em).strip().strip("“”\"").strip()
+    if len(em) < 12:
+        return None
+    return {"autor": _limpa_autor(autor), "ementa": em[:1].upper() + em[1:].lower() if em.isupper() else em,
             "data": "%s-%s-%s" % (data.group(3), data.group(2), data.group(1)) if data else ""}
 
 
-def proposicoes(ano, max_novas=350, falhas_seguidas=15):
-    """Varre os PDFs de tramitação (pl1_26.pdf, pl2_26.pdf...) e guarda o que já leu em dados/alece_proposicoes.json."""
+def proposicoes(ano, max_baixar=400, falhas_seguidas=20):
+    """Varre os PDFs de tramitação (pl1_26.pdf, pl2_26.pdf...) e guarda o que já leu em dados/alece_proposicoes.json.
+    Os PDFs que existem mas não deram para ler ficam anotados em '_sem_texto' e são lidos de novo quando o leitor melhora."""
     banco = ler("alece_proposicoes.json", {}) or {}
     doano = banco.setdefault(str(ano), {})
+    sem = doano.setdefault("_sem_texto", {})
     for tipo in TIPOS:
         ja = doano.setdefault(tipo, {})
-        n = max([int(k) for k in ja] or [0]) + 1
-        falhas = novas = 0
-        while falhas < falhas_seguidas and novas < max_novas:
-            url = TRAMIT % (ano, tipo, n, ano % 100)
+        ruins = sem.setdefault(tipo, {})
+        # números que faltam: os nunca vistos e os que falharam com um leitor antigo
+        conhecidos = [int(k) for k in ja] + [int(k) for k in ruins]
+        topo = max(conhecidos or [0])
+        refazer = [n for n in range(1, topo + 1) if (str(n) not in ja and ruins.get(str(n), 0) < PARSER) or
+                   (str(n) in ja and ja[str(n)].get("v", 1) < PARSER)]
+        fila, n, falhas, baixados, novas = list(refazer), topo + 1, 0, 0, 0
+        while baixados < max_baixar:
+            if fila:
+                k = fila.pop(0)
+            elif falhas < falhas_seguidas:
+                k, n = n, n + 1
+            else:
+                break
+            url = TRAMIT % (ano, tipo, k, ano % 100)
             try:
                 bruto = get(url, tipo="bytes", aceitar="application/pdf", tentativas=2)
             except Exception:  # noqa: BLE001
-                falhas += 1
-                n += 1
+                if k >= topo:
+                    falhas += 1
                 continue
+            baixados += 1
+            if k >= topo:
+                falhas = 0
             info = ler_proposicao(_texto_pdf(bruto))
-            falhas = 0
             if info:
                 info["url"] = url
-                ja[str(n)] = info
+                info["v"] = PARSER
+                ja[str(k)] = info
+                ruins.pop(str(k), None)
                 novas += 1
-            n += 1
-        print("  ALECE %s %d: %d no total, %d novas" % (tipo, ano, len(ja), novas))
+            else:
+                ruins[str(k)] = PARSER
+        print("  ALECE %s %d: %d lidos, %d sem texto, %d novos nesta rodada" % (tipo, ano, len(ja), len(ruins), novas))
     salvar("alece_proposicoes.json", banco)
-    return doano
+    return {k: v for k, v in doano.items() if not k.startswith("_")}
 
 
 def projetos_por_autor(doano, pessoas, ano):
     """Liga cada proposição ao(s) deputado(s) autor(es). Devolve {pid: [projetos]} e a lista do Poder Executivo."""
     por, executivo = {p["id"]: [] for p in pessoas}, []
     for tipo, itens in doano.items():
+        if tipo.startswith("_"):
+            continue
         for n, info in itens.items():
             em = info["ementa"]
             hom = homenagem(em)
-            lado, palavra = lado_povo(em)
             pr = {"tipo": TIPOS.get(tipo, tipo.upper()), "numero": "%s/%d" % (n, ano), "ano": ano, "ementa": em, "data": info.get("data"),
-                  "temas": classificar(em), "homenagem": hom, "lado": 0 if hom else lado, "palavra": None if hom else palavra, "url": info["url"]}
-            autor = norm(info["autor"])
+                  "temas": classificar(em), "homenagem": hom, "url": info["url"]}
+            autor = norm(_limpa_autor(info["autor"]))
             if "executivo" in autor or "governador" in autor:
                 executivo.append(pr)
                 continue
