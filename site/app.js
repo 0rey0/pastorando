@@ -503,10 +503,10 @@ function perfil(id){
   }
   /* Viagens */
   if (p.viagens){ const v = p.viagens, u = v.ultimas[0], dest = {};
-    v.ultimas.forEach(function(x){ x.trecho.split(" · ").forEach(function(t){ const d = t.split("/")[1]; if (d) dest[d] = (dest[d]||0)+1; }); });
-    h += quadro("aviao","c2","Viagens pagas com a cota", kpis([{r:"Trechos", v:v.n}, {r:"Em passagens", v:mil(v.total)}, u?{r:"Última", v:esc(u.trecho), s:dataBR(u.data)}:null])+
+    v.ultimas.forEach(function(x){ (x.trecho||"").split(" · ").forEach(function(t){ const d = t.split("/")[1]; if (d) dest[d] = (dest[d]||0)+1; }); });
+    h += quadro("aviao","c2","Viagens pagas com a cota", kpis([{r:v.ultimas.some(function(x){return x.trecho;})?"Trechos":"Passagens", v:v.n}, {r:"Em passagens", v:mil(v.total)}, u?{r:"Última", v:esc(u.trecho||u.empresa||"passagem aérea"), s:dataBR(u.data)}:null])+
       '<p style="margin:10px 0 4px"><b>Destinos mais frequentes</b></p>'+barrasH(Object.keys(dest).sort(function(a,b){return dest[b]-dest[a];}).slice(0,5).map(function(d){ return {r:AEROPORTOS[d]||d, v:dest[d], t:dest[d]+"×"}; }))+
-      tabela([{t:"Trecho", k:"trecho", fmt:function(v,x){ return esc(v)+'<small>'+esc(x.empresa||"")+'</small>'; }},{t:"Data", k:"data", fmt:function(v){ return dataBR(v); }},{t:"Valor", k:"valor", num:true, fmt:function(v,x){ return BRL2.format(v)+(x.url?fi(x.url,"bilhete"):''); }}], v.ultimas, {limite:5}), fi(fp(p,"viagens")), "", "c-viagens");
+      tabela([{t:"Trecho", k:"trecho", fmt:function(v,x){ return esc(v||"não informado pela Casa")+'<small>'+esc(x.empresa||"")+'</small>'; }},{t:"Data", k:"data", fmt:function(v){ return dataBR(v); }},{t:"Valor", k:"valor", num:true, fmt:function(v,x){ return BRL2.format(v)+(x.url?fi(x.url,"bilhete"):''); }}], v.ultimas, {limite:5}), fi(fp(p,"viagens")), "", "c-viagens");
   } else if (p.casa==="alece" && g){
     const desl = g.por_categoria.filter(function(x){ return /passag|combust|locomo|hosped|veic|aluguel de ve|transporte/i.test(semAc(x[0])); });
     if (desl.length) h += quadro("aviao","c2","Deslocamentos pagos com a verba", '<div class="r num">'+mil(desl.reduce(function(a,x){return a+x[1];},0))+'</div>'+barrasH(desl.map(function(x){ return {r:x[0], v:x[1], t:mil(x[1])}; }))+'<p class="frase">A Assembleia não publica o destino de cada viagem em dados abertos.</p>', fi(fp(p,"gastos")), "", "c-viagens");
@@ -817,11 +817,11 @@ function gastosTodos(){
 function viagensTodas(){
   topo(false);
   const L = D.pessoas.filter(function(p){ return p.viagens && p.viagens.ultimas.length; }).map(function(p){ return {p:p, v:p.viagens.ultimas[0], n:p.viagens.n, t:p.viagens.total}; });
-  const dest = {}; L.forEach(function(o){ o.p.viagens.ultimas.forEach(function(x){ x.trecho.split(" · ").forEach(function(t){ const d = t.split("/")[1]; if (d) dest[d] = (dest[d]||0)+1; }); }); });
+  const dest = {}; L.forEach(function(o){ o.p.viagens.ultimas.forEach(function(x){ (x.trecho||"").split(" · ").forEach(function(t){ const d = t.split("/")[1]; if (d) dest[d] = (dest[d]||0)+1; }); }); });
   app.innerHTML = '<a class="voltar" href="#inicio">'+I("volta")+'Início</a><h1>Viagens</h1><p class="sub">Passagens pagas com dinheiro público. Mostra por onde andam os deputados federais e senadores.</p>'+
   kpis([{ic:"aviao", r:"Trechos em "+ANO, v:NUM.format(L.reduce(function(a,o){return a+o.n;},0))}, {ic:"moeda", r:"Gasto em passagens", v:mil(L.reduce(function(a,o){return a+o.t;},0))}])+
   '<div class="quadros">'+quadro("aviao","c2","Última viagem de cada um", L.length ? tabela([{t:"Nome", k:"_n", ordv:function(o){ return o.p.nome; }, fmt:function(v,o){ return '<a class="tb-p" href="#p-'+esc(o.p.id)+'">'+av(o.p)+'<span>'+esc(o.p.nome)+'<small>'+CASAS[o.p.casa].nome+'</small></span></a>'; }},
-      {t:"Última", k:"_u", ordv:function(o){ return o.v.data; }, fmt:function(v,o){ return esc(o.v.trecho)+'<small>'+dataBR(o.v.data)+'</small>'; }},
+      {t:"Última", k:"_u", ordv:function(o){ return o.v.data; }, fmt:function(v,o){ return esc(o.v.trecho||o.v.empresa||"passagem aérea")+'<small>'+dataBR(o.v.data)+'</small>'; }},
       {t:"Trechos", k:"n", num:true}, {t:"Total", k:"t", num:true, fmt:function(v,o){ return mil(v)+fi(fp(o.p,"viagens")); }}], L, {ord:1, dir:-1, limite:15}) : '<p class="frase">Ainda sem viagens nos dados.</p>', '', "q2")+
   quadro("mapa","c2","Destinos mais frequentes", barrasH(Object.keys(dest).sort(function(a,b){return dest[b]-dest[a];}).slice(0,8).map(function(d){ return {r:AEROPORTOS[d]||d, v:dest[d], t:dest[d]+"×"}; })), '')+'</div>'+
   '<div class="info">'+I("info")+'<span>A Assembleia Legislativa não publica o destino das viagens de cada deputado estadual em dados abertos. No perfil deles mostramos quanto da verba foi para deslocamento.</span></div>';
@@ -845,7 +845,7 @@ function eleitosPag(){
 }
 /* ---------- cidades: indicadores do IBGE, áreas prioritárias ---------- */
 function dadosCidade(c){ const M = (D.mun||{}).municipios||{}; const k = Object.keys(M).find(function(n){ return chaveMun(n)===chaveMun(c); }); return k ? M[k] : null; }
-function fmtInd(k, v){ if (v==null) return "—"; if (k.indexOf("idhm")===0) return String(v.toFixed(3)).replace(".",","); if (k==="pib_pc") return BRL.format(v); if (k==="pop") return NUM.format(Math.round(v)); if (k==="mort_inf") return String(v.toFixed(1)).replace(".",","); if (k==="escolar") return pct(v); if (k==="salario") return String(v.toFixed(1)).replace(".",",")+" sal. mín."; return NUM.format(v); }
+function fmtInd(k, v){ if (v==null) return "—"; if (k.indexOf("idhm")===0) return String(v.toFixed(3)).replace(".",","); if (k==="pib_pc") return BRL.format(v); if (k==="renda_pc") return BRL.format(v); if (k==="pind" || k==="agua_esgoto") return pct(v); if (k==="pop") return NUM.format(Math.round(v)); if (k==="mort_inf") return String(v.toFixed(1)).replace(".",","); if (k==="escolar") return pct(v); if (k==="salario") return String(v.toFixed(1)).replace(".",",")+" sal. mín."; return NUM.format(v); }
 function valoresInd(k){ const M = (D.mun||{}).municipios||{}, o = {}; Object.keys(M).forEach(function(n){ if (M[n][k]!=null) o[n] = M[n][k]; }); return o; }
 function mediana(arr){ const a = arr.filter(function(x){return x!=null;}).sort(function(x,y){return x-y;}); return a.length ? a[Math.floor(a.length/2)] : null; }
 function linkIBGE(c){ return "https://cidades.ibge.gov.br/brasil/ce/"+semAc(c).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+"/panorama"; }
@@ -868,9 +868,9 @@ function cidadePag(cid){
   '<select class="campo" id="cSel" aria-label="Escolha a cidade" style="margin-top:14px;max-width:420px"><option value="">Escolha a cidade</option>'+nomes.map(function(n){ return '<option'+(n===c?' selected':'')+'>'+esc(n)+'</option>'; }).join("")+'</select>';
   if (c && m){
     h += (m.pos_prioridade && m.pos_prioridade<=30 ? '<div class="olho" style="margin-top:6px">'+I("alvo")+'<p><b>Área prioritária:</b> '+esc(c)+' é a '+m.pos_prioridade+'ª cidade que mais precisa de atenção entre as '+total+' do Ceará, pelos números de desenvolvimento, renda, saúde e escola. <a href="#prioridades">Veja por quê</a>.</p></div>' : '')+
-    kpis([{ic:"vazio", r:"População", v:fmtInd("pop",m.pop), s:"IBGE"+((D.mun.anos||{}).pop?" · "+D.mun.anos.pop:""), f:linkIBGE(c)},
+    kpis([{ic:"vazio", r:"População", v:fmtInd("pop",m.pop), s:((D.mun.anos||{}).pop==="2010"?"Censo 2010":"IBGE"+((D.mun.anos||{}).pop?" · "+D.mun.anos.pop:"")), f:linkIBGE(c)},
           {ic:"alvo", r:"IDHM", v:fmtInd("idhm",m.idhm), s:(m.faixa_idhm?"desenvolvimento "+m.faixa_idhm:"")+((D.mun.anos||{}).idhm?" · "+D.mun.anos.idhm:""), f:(D.mun.fontes||{}).idhm, tom:m.idhm!=null&&m.idhm<.6?"alerta":""},
-          {ic:"moeda", r:"PIB por pessoa", v:fmtInd("pib_pc",m.pib_pc), s:comp("pib_pc"), f:linkIBGE(c)},
+          (m.pib_pc!=null ? {ic:"moeda", r:"PIB por pessoa", v:fmtInd("pib_pc",m.pib_pc), s:comp("pib_pc"), f:linkIBGE(c)} : {ic:"moeda", r:"Renda média por pessoa", v:fmtInd("renda_pc",m.renda_pc), s:"Censo 2010 · "+comp("renda_pc"), f:(D.mun.fontes||{}).idhm}),
           {ic:"dinheiro", r:"Emendas por habitante", v:m.emendas_pc!=null?BRL2.format(m.emendas_pc):"—", s:"pagas desde 2023 · "+mil(m.emendas||0)+" no total", f:"https://portaldatransparencia.gov.br/emendas"}]);
   } else if (c) h += kpis([{ic:"dinheiro", r:"Emendas pagas desde 2023", v:mil(emTot), s:emen.length+" parlamentares mandaram"}]);
   h += '<div class="quadros">'+quadro("mapa","c2","Mapa do Ceará", '<div class="filtros" id="mModo" style="margin:0 0 4px" role="group" aria-label="O que mostrar no mapa">'+Object.keys(MAPAS_CIDADE).map(function(k){ return '<button type="button" class="chipbtn" data-modo="'+k+'" aria-pressed="'+(k===modo)+'">'+MAPAS_CIDADE[k][0]+'</button>'; }).join("")+'</div>'+
@@ -878,7 +878,7 @@ function cidadePag(cid){
   if (c && m){
     const linhas = ["idhm_r","idhm_l","idhm_e"].filter(function(k){ return m[k]!=null; });
     h += quadro("alvo","c4","Como vive o povo de "+esc(c), (linhas.length ? '<p style="margin:2px 0 0"><b>As três partes do IDHM</b></p>'+barrasH(linhas.map(function(k){ return {r:{idhm_r:"Renda",idhm_l:"Saúde e vida longa",idhm_e:"Educação"}[k], v:m[k], t:fmtInd(k,m[k]), tom:m[k]>=.7?"bom":m[k]<.6?"alerta":"", d:IND[k].nome+": "+fmtInd(k,m[k])}; }), {max:1}) : '')+
-      '<ul class="det" style="list-style:none;padding:0;margin:12px 0 0">'+["mort_inf","escolar","salario"].filter(function(k){ return m[k]!=null; }).map(function(k){ return '<li><span>'+esc(IND[k].nome)+'<small>'+(IND[k].unidade==="%"?"":esc(IND[k].unidade))+(comp(k)?(IND[k].unidade==="%"?"":" · ")+comp(k):'')+'</small></span><span><b class="num">'+fmtInd(k,m[k])+'</b>'+fi(linkIBGE(c),"IBGE Cidades")+'</span></li>'; }).join("")+'</ul>'+
+      '<ul class="det" style="list-style:none;padding:0;margin:12px 0 0">'+["mort_inf","escolar","pind","renda_pc","salario"].filter(function(k){ return m[k]!=null; }).map(function(k){ return '<li><span>'+esc(IND[k].nome)+'<small>'+(IND[k].unidade==="%"?"":esc(IND[k].unidade))+(comp(k)?(IND[k].unidade==="%"?"":" · ")+comp(k):'')+'</small></span><span><b class="num">'+fmtInd(k,m[k])+'</b>'+fi(linkIBGE(c),"IBGE Cidades")+'</span></li>'; }).join("")+'</ul>'+
       '<p class="fonte">O IDHM vai de 0 a 1: quanto mais perto de 1, melhor. É calculado pelo PNUD com dados do Censo.</p>', fi(linkIBGE(c),"IBGE Cidades: "+c));
     h += quadro("urna","c4","Mais votados em "+esc(c)+" (2022)", ["alece","camara","senado"].map(function(casa){ const X = porCasa(casa).slice(0,5); return X.length ? '<p style="margin:10px 0 4px"><b>'+CASAS[casa].nome+'</b></p>'+barrasH(X.map(function(o){ return {r:o.p.nome, v:o.n, t:NUM.format(o.n), h:"#p-"+o.p.id, f:fi(fp(o.p,"votos"))}; })) : ''; }).join("") || '<p class="frase">Sem dados de votação.</p>', fi("https://dadosabertos.tse.jus.br/dataset/resultados-2022","TSE · resultados 2022"));
     h += quadro("dinheiro","c3","Quem mandou emendas para "+esc(c), (emen.length ? barrasH(emen.map(function(o){ return {r:o.p.nome, v:o.v, t:mil(o.v), h:"#p-"+o.p.id, s:CASAS[o.p.casa].nome}; })) : '<p class="frase">Nenhuma emenda paga registrada desde 2023.</p>')+
@@ -906,9 +906,9 @@ function prioridadesPag(){
     '<div class="acoes"><button type="button" class="btn cheio" id="pCobra">'+I("megafone")+'Cobrar emendas para essas cidades</button></div>', fi("https://portaldatransparencia.gov.br/emendas","Portal da Transparência · emendas")) : '')+
   quadro("alvo","c4","As 184 cidades, da que mais precisa para a que menos precisa", tabela([{t:"Cidade", k:"nome", fmt:function(v,x){ return '<a href="#cidade-'+encodeURIComponent(v)+'"><b>'+esc(v)+'</b></a><small>'+x.pos_prioridade+'º em prioridade</small>'; }},
       {t:"IDHM", k:"idhm", num:true, fmt:function(v){ return fmtInd("idhm",v); }}, {t:"Mortalidade infantil", k:"mort_inf", num:true, fmt:function(v){ return fmtInd("mort_inf",v); }},
-      {t:"Na escola (6-14)", k:"escolar", num:true, fmt:function(v){ return fmtInd("escolar",v); }}, {t:"PIB por pessoa", k:"pib_pc", num:true, fmt:function(v){ return fmtInd("pib_pc",v); }},
+      {t:"Na escola (6-14)", k:"escolar", num:true, fmt:function(v){ return fmtInd("escolar",v); }}, {t:"Extrema pobreza", k:"pind", num:true, fmt:function(v){ return fmtInd("pind",v); }},
       {t:"Emendas por hab.", k:"emendas_pc", num:true, fmt:function(v){ return v==null?"—":BRL2.format(v); }}, {t:"", k:"_i", semOrd:true, fmt:function(v,x){ return fi(linkIBGE(x.nome),"IBGE Cidades"); }}], L, {limite:20}), '', "qt")+
-  quadro("info","c2","Como calculamos a prioridade", '<p class="frase">Para cada cidade, vemos a posição dela entre as 184 do Ceará em cinco números oficiais: IDHM, IDHM Renda, mortalidade infantil, crianças na escola e salário médio. A prioridade é a média dessas posições, de 0 (melhor do estado) a 100 (pior do estado).</p><p class="frase">Fontes: IBGE Cidades e Atlas do Desenvolvimento Humano (PNUD). O IDHM disponível por cidade é do último Censo com esse cálculo.</p>', fi((D.mun.fontes||{}).api))+
+  quadro("info","c2","Como calculamos a prioridade", '<p class="frase">Para cada cidade, vemos a posição dela entre as 184 do Ceará em cinco números oficiais: IDHM, IDHM Renda, mortalidade infantil, crianças na escola e pessoas em extrema pobreza. A prioridade é a média dessas posições, de 0 (melhor do estado) a 100 (pior do estado).</p><p class="frase">Fontes: IBGE Cidades e Atlas do Desenvolvimento Humano (PNUD). O IDHM disponível por cidade é do último Censo com esse cálculo.</p>', fi((D.mun.fontes||{}).api))+
   '</div>';
   const pc = document.getElementById("pCobra"); if (pc) pc.onclick = function(){ abreCobrarCidade(esquecidas.slice(0,5).map(function(x){return x.nome;}).join(", ")); };
 }

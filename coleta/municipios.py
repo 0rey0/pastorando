@@ -16,7 +16,7 @@ API_PESQ = "https://servicodados.ibge.gov.br/api/v1/pesquisas/%s/indicadores/%s/
 # chave: (pesquisa, indicador ou lista de indicadores em ordem de preferência, nome, unidade, maior_é_melhor)
 INDICADORES = {
     "pop": ("10102", [96385, 29171], "População", "pessoas", None),
-    "idhm": ("37", 30255, "IDHM (desenvolvimento humano)", "índice de 0 a 1", True),
+    "idhm": ("37", [329756, 30255], "IDHM (desenvolvimento humano)", "índice de 0 a 1", True),
     "idhm_r": ("37", 30257, "IDHM Renda", "índice de 0 a 1", True),
     "idhm_l": ("37", 30259, "IDHM Longevidade", "índice de 0 a 1", True),
     "idhm_e": ("37", 30261, "IDHM Educação", "índice de 0 a 1", True),
@@ -24,9 +24,12 @@ INDICADORES = {
     "salario": ("33", 29765, "Salário médio dos trabalhadores formais", "salários mínimos", True),
     "mort_inf": ("39", 30279, "Mortalidade infantil", "óbitos por mil nascidos vivos", False),
     "escolar": ("40", 60045, "Crianças de 6 a 14 anos na escola", "%", True),
+    # estes dois vêm só do Atlas (Censo 2010)
+    "renda_pc": (None, None, "Renda média por pessoa (valores de 2010)", "R$ por mês", True),
+    "pind": (None, None, "Pessoas em extrema pobreza", "% da população", False),
 }
 # o que entra no índice de prioridade (quanto pior, mais prioridade)
-PRIORIDADE = ["idhm", "idhm_r", "mort_inf", "escolar", "salario"]
+PRIORIDADE = ["idhm", "idhm_r", "mort_inf", "escolar", "pind"]
 DIAS = 7
 
 
@@ -81,6 +84,14 @@ def _resultados_um(pesq, ind, codigos):
     return out
 
 
+def _atlas():
+    try:
+        with open(os.path.join(RAIZ, "config", "atlas_ce_2010.json"), encoding="utf-8") as f:
+            return json.load(f)["municipios"]
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
 def pagina_ibge(nome):
     return "https://cidades.ibge.gov.br/brasil/ce/%s/panorama" % slug(nome)
 
@@ -93,10 +104,12 @@ def faixa_idhm(v):
 
 def coletar(pessoas, forcar=False):
     velho = ler("municipios.json", {}) or {}
-    if not forcar and velho.get("epoch", 0) > time.time() - DIAS * 86400 and velho.get("municipios"):
+    tem_dados = any(d.get("idhm") is not None for d in (velho.get("municipios") or {}).values())
+    if not forcar and tem_dados and velho.get("epoch", 0) > time.time() - DIAS * 86400:
         base = velho
         print("Municípios: usando indicadores guardados de", velho.get("quando"))
     else:
+        ibge_ok = True
         try:
             locais = get(LOCAIS, timeout=40, tentativas=3)
             nomes = {str(m["id"]): m["nome"] for m in locais}
@@ -106,10 +119,13 @@ def coletar(pessoas, forcar=False):
             with open(os.path.join(RAIZ, "site", "mapa-ce.json"), encoding="utf-8") as f:
                 mapa = json.load(f)["municipios"]
             nomes = {str(m["ibge"]): n for n, m in mapa.items() if m.get("ibge")}
+            ibge_ok = False  # o IBGE não respondeu nem a lista de cidades; não vale esperar pelos indicadores
         cods = sorted(nomes)
         muni = {nomes[c]: {"ibge": c} for c in cods}
         anos = {}
         for k, (pesq, ind, *_r) in INDICADORES.items():
+            if ind is None or not ibge_ok:
+                continue
             res = _resultados(pesq, ind, cods)
             por6 = {c[:6]: c for c in cods}
             for c6, (v, ano) in res.items():
@@ -117,6 +133,18 @@ def coletar(pessoas, forcar=False):
                 if c:
                     muni[nomes[c]][k] = v
                     anos[k] = max(anos.get(k, ""), ano)
+        # o que o IBGE não respondeu vem do Atlas (Censo 2010), que fica guardado no próprio repositório
+        atlas = _atlas()
+        usados = 0
+        for nome, d in muni.items():
+            a = atlas.get(nome) or atlas.get(next((n for n in atlas if norm(n) == norm(nome)), ""), {})
+            for k, v in a.items():
+                if k in INDICADORES and d.get(k) is None and v is not None:
+                    d[k] = v
+                    anos.setdefault(k, "2010")
+                    usados += 1
+        if usados:
+            print("  Atlas 2010 completou %d números" % usados)
         base = {"municipios": muni, "anos": anos}
     muni = base["municipios"]
     # índice de prioridade: média das posições (0 = melhor do estado, 100 = pior)
@@ -149,7 +177,8 @@ def coletar(pessoas, forcar=False):
               "prioridade_usa": PRIORIDADE, "municipios": muni,
               "fontes": {"ibge": fonte("IBGE Cidades", "https://cidades.ibge.gov.br/brasil/ce/panorama"),
                          "idhm": fonte("Atlas do Desenvolvimento Humano no Brasil (PNUD, Ipea, FJP)", "http://www.atlasbrasil.org.br/"),
-                         "api": fonte("IBGE · API de pesquisas", "https://servicodados.ibge.gov.br/api/docs/pesquisas")}}
+                         "api": fonte("IBGE · API de pesquisas", "https://servicodados.ibge.gov.br/api/docs/pesquisas"),
+                         "atlas": fonte("Atlas Brasil · planilha municipal (Censo 2010)", "http://www.atlasbrasil.org.br/acervo/biblioteca")}}
     salvar("municipios.json", pacote)
     print("Municípios: %d cidades; %d com índice de prioridade" % (len(muni), len(ordem)))
     return pacote

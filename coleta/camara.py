@@ -125,7 +125,9 @@ def viagens(ano, ids, nomes=None):
             dg["com_trecho"] += 1
             if not dg["exemplo"]:
                 dg["exemplo"] = l[:32]
-        if not tr or not quem:
+        # desde 2025 a Câmara deixou o trecho em branco; a passagem ainda aparece pelo tipo de despesa
+        eh_passagem = idx.get("tipo") is not None and "passage" in norm(l[idx["tipo"]])
+        if not quem or not (tr or eh_passagem):
             continue
         dg["casadas"] += 1
         por.setdefault(quem, []).append({

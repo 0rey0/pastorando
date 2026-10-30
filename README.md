@@ -86,6 +86,8 @@ Cada cidade do Ceará tem sua página (`#cidade-Nome`) com população, IDHM e s
 
 A página **Áreas prioritárias** ordena as 184 cidades pela média da posição de cada uma em cinco números (IDHM, IDHM Renda, mortalidade infantil, escola e salário): 100 = pior do estado. Ela também mostra as cidades que estão entre as 40 que mais precisam e receberam menos emenda por habitante que a média, com botão para cobrar a bancada federal.
 
+A API do IBGE às vezes não responde para os servidores do GitHub, que ficam fora do Brasil. Por isso o repositório guarda uma cópia dos números do Atlas do Desenvolvimento Humano (Censo 2010) em `config/atlas_ce_2010.json`: IDHM, renda, mortalidade infantil, escola e extrema pobreza das 184 cidades. Quando o IBGE responde, os números mais novos entram por cima.
+
 Atenção: o IDHM por cidade é o do Censo 2010 (o último calculado pelo PNUD para todos os municípios). Os outros números usam o ano mais recente que o IBGE publicar. O robô atualiza essa parte uma vez por semana.
 
 ## No noticiário
