@@ -2,7 +2,7 @@
 import datetime
 import re
 
-from comum import (achar_coluna, baixar, classificar, fonte, foto_existente, get, homenagem, lado_povo, linhas_csv_zip, norm,
+from comum import (achar_coluna, baixar, classificar, fonte, foto_existente, get, homenagem, linhas_csv_zip, norm,
                    numero_br, resumir_gastos, salvar_foto)
 
 BASE = "https://dadosabertos.camara.leg.br/api/v2"
@@ -55,11 +55,10 @@ def projetos(id_, ano):
         if p.get("siglaTipo") not in TIPOS_PROJETO:
             continue
         em = p.get("ementa") or ""
-        lado, palavra = lado_povo(em)
         hom = homenagem(em)
         out.append({
             "tipo": p.get("siglaTipo"), "numero": p.get("numero"), "ano": p.get("ano"),
-            "ementa": em, "temas": classificar(em), "homenagem": hom, "lado": 0 if hom else lado, "palavra": None if hom else palavra,
+            "ementa": em, "temas": classificar(em), "homenagem": hom,
             "url": SITE + "/propostas-legislativas/%s" % p.get("id"),
         })
     return out

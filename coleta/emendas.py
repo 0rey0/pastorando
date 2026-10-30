@@ -99,7 +99,7 @@ def coletar(pessoas):
             "autor": melhor, "anos": sorted(r["anos"]), "empenhado": round(r["empenhado"], 2), "pago": round(r["pago"], 2),
             "pct_servicos": round(100 * servicos / r["pago"], 1) if r["pago"] else None,
             "por_funcao": sorted([[f, round(v, 2)] for f, v in r["por_funcao"].items()], key=lambda x: -x[1])[:10],
-            "por_municipio": sorted([[m, round(v, 2)] for m, v in r["por_municipio"].items()], key=lambda x: -x[1])[:15],
+            "por_municipio": sorted([[m, round(v, 2)] for m, v in r["por_municipio"].items()], key=lambda x: -x[1]),
             "maiores": sorted(r["lista"], key=lambda e: -e["pago"])[:15],
             "n": len(r["lista"]),
         }

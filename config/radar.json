@@ -1,0 +1,19 @@
+{
+  "_leia": "Radar do Retrocesso: projetos da agenda da extrema-direita que fazem o país andar para trás. Lista editorial e aberta: o robô procura, nos projetos que se mexeram nos últimos dias, as palavras abaixo. Para tirar um projeto que entrou por engano, ponha o id em 'excluir'. Para acompanhar um projeto que as palavras não pegam, ponha o id em 'fixos' (Câmara: o número que aparece no endereço da proposta).",
+  "titulo": "Radar do Retrocesso",
+  "dias_movimento": 90,
+  "temas": {
+    "armas": {"nome": "Armas", "palavras": ["porte de arma", "posse de arma", "armas de fogo", "atiradores desportivos", "colecionadores de arma", "cacs"]},
+    "aborto": {"nome": "Ataque ao aborto legal", "palavras": ["aborto", "nascituro", "interrupcao da gestacao", "interrupcao voluntaria da gravidez"]},
+    "escola": {"nome": "Escola sem partido", "palavras": ["escola sem partido", "doutrinacao", "educacao domiciliar", "homeschooling"]},
+    "lgbt": {"nome": "Contra direitos LGBT", "palavras": ["ideologia de genero", "linguagem neutra", "identidade de genero", "transexua", "redesignacao sexual"]},
+    "anistia": {"nome": "Anistia a golpistas", "palavras": ["anistia aos", "8 de janeiro", "atos antidemocraticos", "manifestacoes politicas ocorridas"]},
+    "punicao": {"nome": "Mais punição, menos direitos", "palavras": ["maioridade penal", "excludente de ilicitude", "castracao quimica", "saida temporaria", "saidinha"]},
+    "movimentos": {"nome": "Criminalizar movimentos sociais", "palavras": ["invasao de propriedade", "invasao de terras", "esbulho possessorio", "terrorismo"]},
+    "ambiente": {"nome": "Ataque ao meio ambiente e aos indígenas", "palavras": ["marco temporal", "licenciamento ambiental", "autolicenciamento", "agrotoxico", "defensivos agricolas", "mineracao em terras indigenas"]},
+    "trabalho": {"nome": "Retirada de direitos do trabalho", "palavras": ["trabalho intermitente", "terceirizacao", "reforma trabalhista", "flexibilizacao da clt"]},
+    "privatizacao": {"nome": "Privatização", "palavras": ["privatiza", "desestatiza"]}
+  },
+  "fixos": {"camara": [], "alece": []},
+  "excluir": []
+}

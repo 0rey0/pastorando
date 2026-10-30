@@ -11,7 +11,7 @@ import re
 import time
 import zipfile
 
-from comum import (FOTOS, agora, baixar, casar_nome, classificar, fonte, get, lado_povo, ler, norm, numero_br, salvar,
+from comum import (FOTOS, agora, baixar, casar_nome, classificar, fonte, get, ler, norm, numero_br, salvar,
                    salvar_foto, slug)
 
 CDN = "https://cdn.tse.jus.br/estatistica/sead/odsele"
@@ -194,7 +194,7 @@ def votos(ano, sqs):
         mun = sorted(turnos[t].items(), key=lambda kv: -kv[1])
         total = sum(v for _, v in mun)
         out[sq] = {"turno": t, "total": total, "n_municipios": sum(1 for _, v in mun if v > 0),
-                   "municipios": [[m, v] for m, v in mun[:15]],
+                   "municipios": [[m, v] for m, v in mun if v > 0],
                    "fortaleza_pct": round(100 * turnos[t].get("Fortaleza", 0) / total, 1) if total else None,
                    "primeiro_turno": sum(turnos.get(1, {}).values()) if t > 1 else None}
     return out
@@ -289,9 +289,8 @@ def promessas_do_plano(texto, limite=45):
         if chave in vistas:
             continue
         vistas.add(chave)
-        lado, palavra = lado_povo(p)
-        achadas.append({"texto": p[0].upper() + p[1:] + ".", "temas": classificar(p), "lado": lado, "concreta": bool(re.search(r"\d", p))})
-    achadas.sort(key=lambda x: (not x["concreta"], x["lado"] != 1))
+        achadas.append({"texto": p[0].upper() + p[1:] + ".", "temas": classificar(p), "concreta": bool(re.search(r"\d", p))})
+    achadas.sort(key=lambda x: (not x["concreta"], not x["temas"]))
     return achadas[:limite]
 
 

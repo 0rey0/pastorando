@@ -140,7 +140,8 @@ PROPS = [("pl", 1, "DEPUTADO JOSE EXEMPLO", "INSTITUI O PROGRAMA ESTADUAL DE CRE
          ("pl", 2, "DEPUTADA MARIA TESTE", "DENOMINA A AREINHA DO MUNICIPIO DE CRATEUS"),
          ("pl", 3, "PODER EXECUTIVO", "PROJETO DE LEI ORIUNDO DA MENSAGEM 9.500 - DISPOE SOBRE O REAJUSTE DOS SERVIDORES"),
          ("pl", 4, "DEPUTADO PEDRO AMOSTRA, DEPUTADO JOSE EXEMPLO", "AUTORIZA A CONCESSAO DE RODOVIA ESTADUAL A INICIATIVA PRIVADA"),
-         ("pi", 1, "DEPUTADA MARIA TESTE", "INDICA A CRIACAO DE RESTAURANTE POPULAR EM SOBRAL")]
+         ("pi", 1, "DEPUTADA MARIA TESTE", "INDICA A CRIACAO DE RESTAURANTE POPULAR EM SOBRAL"),
+         ("pl", 5, "DEPUTADO PEDRO AMOSTRA", "AUTORIZA A PRIVATIZACAO DA COMPANHIA ESTADUAL DE AGUA E ESGOTO")]
 pdfs = {}
 for tipo, n, autor, ementa in PROPS:
     b = pdf("Nº da proposição\n%05d/%d\nData de autuação\n0%d/03/%d\nAssunto principal: PROPOSIÇÕES\nAutor: %s\n\nEmenta:\n%s\n\nEXMO. SR. PRESIDENTE" % (n, ANO, n, ANO, autor, ementa))
@@ -210,7 +211,26 @@ siconfi = {"items": [{"conta": f, "coluna": COL, "valor": v} for f, v in [("Saú
                                                                          ("Encargos Especiais", 4.0e9), ("Administração", 1.5e9), ("Atenção Básica", 2.0e9), ("Habitação", 0.3e9)]]
            + [{"conta": "Saúde", "coluna": "DOTAÇÃO ATUALIZADA (a)", "valor": 7e9}]}
 
+radar_det = {"dados": {"id": 5005, "siglaTipo": "PL", "numero": 105, "ano": ANO, "ementa": EMENTAS[5],
+                       "statusProposicao": {"dataHora": "%d-10-20T10:00" % ANO, "siglaOrgao": "PLEN", "regime": "Urgência (Art. 155, RICD)", "descricaoSituacao": "Pronta para Pauta no PLENÁRIO (PLEN)", "descricaoTramitacao": "Aprovado requerimento de urgência"}}}
+radar_aut = {"dados": [{"nome": "Ana Exemplo", "tipo": "Deputado"}, {"nome": "Fulano de Outro Estado", "tipo": "Deputado"}]}
+# IBGE e jornais
+cidades = [{"id": 2304400, "nome": "Fortaleza"}, {"id": 2312908, "nome": "Sobral"}, {"id": 2307304, "nome": "Juazeiro do Norte"}, {"id": 2303709, "nome": "Crato"}]
+ibge_res = [{"id": 1, "res": [{"localidade": str(c["id"])[:6], "res": {"2010": "%.3f" % (0.6 + 0.03 * i), "2000": "0.5"}} for i, c in enumerate(cidades)]}]
+rss_jornal = ('<?xml version="1.0"?><rss><channel><title>Jornal</title>'
+              '<item><title>Câmara aprova urgência do PL 105/%d que privatiza empresa de água</title><link>https://jornal.exemplo/1</link><pubDate>Mon, 26 Oct %d 10:00:00 GMT</pubDate></item>'
+              '<item><title>Ana Exemplo defende ampliar o porte de arma para atiradores</title><link>https://jornal.exemplo/2</link><pubDate>Tue, 27 Oct %d 10:00:00 GMT</pubDate></item>'
+              '<item><title>Chuva forte em Fortaleza</title><link>https://jornal.exemplo/3</link><pubDate>Tue, 27 Oct %d 10:00:00 GMT</pubDate></item>'
+              '</channel></rss>') % (ANO, ANO, ANO, ANO)
+rss_google = ('<?xml version="1.0"?><rss><channel><item><title>Extrema-direita articula nova ofensiva no Congresso - O Povo</title><link>https://news.google.com/rss/articles/abc</link>'
+              '<pubDate>Wed, 28 Oct %d 10:00:00 GMT</pubDate><source url="https://www.opovo.com.br">O Povo</source></item></channel></rss>') % ANO
 comum.FALSO = {
+    "re:/localidades/estados/23/municipios": grava("ibge_municipios.json", cidades),
+    "re:/pesquisas/indicadores/": grava("ibge_indicador.json", ibge_res),
+    "re:news\\.google\\.com/rss/search": grava("google_noticias.xml", rss_google),
+    "re:(g1\\.globo\\.com/rss|feeds\\.folha|estadao\\.com\\.br/arc)": grava("jornal.xml", rss_jornal),
+    "re:/proposicoes/\\d+/autores": grava("camara_radar_autores.json", radar_aut),
+    "re:/proposicoes/\\d+$": grava("camara_radar_detalhe.json", radar_det),
     # Câmara
     "re:/deputados/900$": grava("camara_detalhe.json", detalhe),
     "re:/deputados/\\d+$": grava("camara_detalhe_outro.json", {"dados": {"ultimoStatus": {"situacao": "Exercício"}}}),
@@ -293,27 +313,39 @@ confere(por["s71"].get("viagens", {}).get("n") == 9, "viagens do Senado")
 confere(por["c900"]["emendas"]["pct_servicos"] == 100.0 and por["c901"]["emendas"]["pct_servicos"] == 50.0, [por["c900"].get("emendas"), por["c901"].get("emendas")])
 confere(por["s71"].get("emendas"), "emendas da senadora")
 pc = por["c900"]["projetos"]
-confere(any(x["homenagem"] for x in pc) and any(x["lado"] == 1 for x in pc) and any(x["lado"] == -1 for x in pc), [(x["ementa"], x["lado"]) for x in pc])
+confere(any(x["homenagem"] for x in pc) and not any("lado" in x for x in pc), "projetos não podem ter 'lado'")
 # ALECE: projetos dos PDFs
 if pdf("x"):
     pj = por["a-jose-exemplo"].get("projetos") or []
-    confere(len(pj) == 2 and any(x["lado"] == 1 for x in pj) and any(x["lado"] == -1 for x in pj), [(x["ementa"], x["lado"]) for x in pj])
+    confere(len(pj) == 2, [x["ementa"] for x in pj])
     confere(any(x["homenagem"] for x in por["a-maria-teste"].get("projetos", [])), "homenagem ALECE")
-    confere(gov["mensagens_resumo"]["total"] == 1 and gov["mensagens"][0]["lado"] == 1, gov.get("mensagens"))
+    confere(gov["mensagens_resumo"]["total"] == 1 and gov["mensagens_resumo"]["por_tema"], gov.get("mensagens_resumo"))
     confere(gov["governador"]["plano"]["promessas"] and gov["governador"]["plano"]["promessas"][0]["concreta"], gov["governador"].get("plano"))
-    confere(any(x["lado"] == -1 for x in gov["governador"]["plano"]["promessas"]), "promessa de privatização não marcada")
-# votações e Régua
+# votações
 confere(len({v["id"] for v in vs}) == len(vs), "votações repetidas")
-cl = {v["descricao"]: v["lado"] for v in vs if v["casa"] == "camara"}
-confere(cl[DESCS[0]] == 1 and cl[DESCS[1]] == -1 and cl[DESCS[3]] == 0 and cl[DESCS[5]] == -1, cl)
+confere(not any("lado" in v for v in vs), "votações não podem ter 'lado'")
 confere(vs[0]["url"].startswith("https://www.camara.leg.br/propostas-legislativas/") or vs[0]["casa"] != "camara", vs[0]["url"])
-confere(meta["regua"]["versao"] == 3 and sum(d["peso"] for d in meta["regua"]["dimensoes"].values()) == 100, meta["regua"]["dimensoes"])
-confere(all(p.get("regua") for p in ps), "todo mundo precisa de régua")
-confere(por["c900"]["regua"]["nota"] is not None and por["c900"]["regua"]["nota"] > por["c901"]["regua"]["nota"], (por["c900"]["regua"], por["c901"]["regua"]))
-confere({d["chave"] for d in por["c900"]["regua"]["dims"]} == set(meta["regua"]["dimensoes"]), por["c900"]["regua"]["dims"])
 # governo
 confere(gov["orcamento"] and list(gov["orcamento"].values())[0]["pct_servicos"] > 50, gov.get("orcamento"))
 confere("Atenção Básica" not in [f[0] for f in list(gov["orcamento"].values())[0]["funcoes"]], "subfunção entrou como função")
+# radar
+rad = L("radar.json")
+cam = [i for i in rad["itens"] if i["casa"] == "camara"]
+confere(cam and cam[0]["etapa"] == 3 and "privatizacao" in cam[0]["temas"] and cam[0]["autores_ce"] == ["c900"], cam)
+if pdf("x"):
+    al = [i for i in rad["itens"] if i["casa"] == "alece"]
+    confere(al and al[0]["autores_ce"] == ["a-pedro-amostra"], al)
+# cidades
+mu = L("municipios.json")["municipios"]
+confere(mu["Sobral"].get("idhm") and mu["Sobral"].get("prioridade") is not None and mu["Sobral"].get("pos_prioridade"), mu.get("Sobral"))
+confere(mu["Sobral"].get("emendas_pc") and mu["Sobral"]["emendas"] > 0, "emendas por habitante de Sobral")
+# notícias
+no = L("noticias.json")["itens"]
+confere(len(no) >= 3 and all(i["temas"] for i in no), [i["titulo"] for i in no])
+confere(any("c5005" in i["radar"] for i in no), "notícia não ligada ao projeto do Radar")
+confere(any("c900" in i["pessoas"] for i in no), "notícia não ligada à deputada citada")
+confere(not any("Chuva" in i["titulo"] for i in no), "notícia sem relação entrou")
+confere(any(i["titulo"].endswith("Congresso") for i in no), "nome do jornal não saiu do título do Google")
 # avisos
 confere(os.path.exists(os.path.join(SAIDA, "feeds", "c900.xml")), "feed RSS")
 if falhas:
@@ -322,6 +354,3 @@ if falhas:
         print("  -", f)
     sys.exit(1)
 print("\nTESTE OK")
-for p in ps:
-    r = p["regua"]
-    print("  %-7s %-20s nota %4s  %s" % (p["casa"], p["nome"], r["nota"], ", ".join("%s %s" % (d["chave"], d["valor"]) for d in r["dims"])))

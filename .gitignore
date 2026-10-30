@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+testes/saida/
+site/dados/*.tmp
+cache/

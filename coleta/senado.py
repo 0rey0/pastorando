@@ -2,7 +2,7 @@
 import datetime
 import re
 
-from comum import (achar_coluna, classificar, fonte, foto_existente, get, homenagem, lado_povo, ler_csv, norm, numero_br,
+from comum import (achar_coluna, classificar, fonte, foto_existente, get, homenagem, ler_csv, norm, numero_br,
                    resumir_gastos, salvar_foto)
 
 BASE = "https://legis.senado.leg.br/dadosabertos"
@@ -150,9 +150,8 @@ def projetos(cod, ano):
             vistos.add(ident)
             cod_m = _campo(d, "CodigoMateria", "Codigo", "codigoMateria")
             hom = homenagem(em)
-            lado, palavra = lado_povo(em)
             out.append({"tipo": ident.split(" ")[0] if ident else "", "numero": ident, "ano": ano, "ementa": em,
-                        "temas": classificar(em), "homenagem": hom, "lado": 0 if hom else lado, "palavra": None if hom else palavra,
+                        "temas": classificar(em), "homenagem": hom,
                         "url": MATERIA % cod_m if cod_m else "https://www25.senado.leg.br/web/atividade/materias"})
         if out:
             return out

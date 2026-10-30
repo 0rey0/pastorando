@@ -1,37 +1,37 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pastorando · de olho em quem o Ceará elegeu</title>
-<meta name="description" content="Gastos, votos, projetos, presença, viagens, emendas e a Régua do Povo dos deputados estaduais, federais, senadores e do governo do Ceará. Dados oficiais, de graça.">
-<meta property="og:title" content="Pastorando">
-<meta property="og:description" content="O povo pastorando o poder: gastos, votos e projetos de quem o Ceará elegeu.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M8 20c3.5-6 8-8.5 12-8.5S28.5 14 32 20c-3.5 6-8 8.5-12 8.5S11.5 26 8 20z' fill='%23fbe9c9' stroke='%2316302d' stroke-width='2.4'/%3E%3Ccircle cx='20' cy='20' r='4.6' fill='%23d9432b'/%3E%3C/svg%3E">
+<title>EspiaCE · espia só o que teu político anda fazendo</title>
+<meta name="description" content="Gastos, votos, projetos, presença, viagens, emendas e o Radar do Retrocesso dos deputados estaduais, federais, senadores e do governo do Ceará. Dados oficiais, de graça.">
+<meta property="og:title" content="EspiaCE">
+<meta property="og:description" content="Espia só: gastos, votos e projetos de quem o Ceará elegeu.">
+<meta name="theme-color" content="#dce6cc">
+<meta name="color-scheme" content="light only">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='19' fill='%23f2d064'/%3E%3Cpath d='M6 21c4-6.5 9-9.5 14-9.5S30 14.5 34 21c-4 6.5-9 9.5-14 9.5S10 27.5 6 21z' fill='%23fff' stroke='%231f3a2b' stroke-width='2.6'/%3E%3Ccircle cx='23' cy='20' r='5.4' fill='%231f3a2b'/%3E%3Ccircle cx='25' cy='18' r='1.6' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
-<div class="chita" aria-hidden="true"></div>
-<div class="topo-verm">
-<header>
-  <a class="logo" href="#inicio" aria-label="Pastorando, início">
-    <svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><g stroke="#f1ad1b" stroke-width="3" stroke-linecap="round"><path d="M20 2v5M20 33v5M2 20h5M33 20h5M7 7l3.5 3.5M29.5 29.5L33 33M7 33l3.5-3.5M29.5 10.5L33 7"/></g><path d="M8 20c3.5-6 8-8.5 12-8.5S28.5 14 32 20c-3.5 6-8 8.5-12 8.5S11.5 26 8 20z" fill="#fbe9c9" stroke="#16302d" stroke-width="2.4"/><circle cx="20" cy="20" r="4.6" fill="#d9432b"/></svg>
-    <b>pastorando</b>
-  </a>
-  <div class="cab-dir">
-    <a class="ibtn" href="#seguindo" aria-label="Seguindo e avisos"><span id="icSino"></span><span class="n num" id="nSeg">0</span></a>
-    <a class="ibtn" href="#sobre" aria-label="Sobre e fontes" id="lSobre"></a>
-    <button class="ibtn" id="bTema" type="button" aria-label="Mudar para a versão noturna"></button>
+<a class="pular" href="#app">Pular para o conteúdo</a>
+<header class="barra">
+  <div class="barra-in">
+    <a class="marca" href="#inicio" aria-label="EspiaCE, início"><span class="olhinho" aria-hidden="true"></span><span class="nome-marca">espia<b>CE</b></span></a>
+    <nav class="abas" id="abas" aria-label="Menu"></nav>
+    <div id="buscaBarra" class="busca-barra"></div>
+    <div class="cab-dir">
+      <a class="ibtn" href="#seguindo" aria-label="Quem você segue e novidades"><span id="icSino"></span><span class="n num" id="nSeg">0</span></a>
+    </div>
   </div>
 </header>
+<span id="lSobre" hidden></span>
 <div id="heroi"></div>
-</div>
 <div id="buscaTopo"></div>
-<main id="app"><div class="carregando">Carregando dados…</div></main>
-<footer><div><b>Política é coisa do povo.</b>Pastorando: tomar conta, vigiar. Dados oficiais da Câmara, do Senado, da Assembleia Legislativa do Ceará, do TSE, da CGU e do Tesouro Nacional. Código aberto, sem dinheiro de partido. <a href="#dados" style="color:inherit">Dados abertos</a> · <a href="#sobre" style="color:inherit">Sobre</a>. <span id="atual"></span></div></footer>
+<main id="app" tabindex="-1"><div class="carregando">Carregando dados…</div></main>
+<footer><div><b>EspiaCE</b><span>Espia só o que teu político anda fazendo. Dados oficiais da Câmara, do Senado, da Assembleia Legislativa do Ceará, do TSE, da CGU e do Tesouro Nacional. Código aberto, sem dinheiro de partido. <a href="#dados">Dados abertos</a> · <a href="#sobre">Sobre</a>.<span id="atual"></span></span></div></footer>
 <div class="veu" id="veu" aria-hidden="true"><div class="folha" role="dialog" aria-modal="true" aria-labelledby="fTit" id="folha"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
