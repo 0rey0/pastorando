@@ -85,7 +85,14 @@ def coletar(pessoas, radar_pacote):
             numero = "%d/%s" % (int(m.group(2)), ano)
             it["radar"] += [r["id"] for r in radar_itens if r["numero"] == numero and (r["tipo"] or "").upper() in tipos]
         it["pessoas"] = [pid for pid, n in nomes if re.search(r"(?<![a-z])" + re.escape(n) + r"(?![a-z])", t)]
-    lista = sorted(itens.values(), key=lambda i: i.get("data") or "", reverse=True)[: cfg.get("maximo", 300)]
+    vistos, unicos = set(), []
+    for it in sorted(itens.values(), key=lambda i: i.get("data") or "", reverse=True):
+        chave = re.sub(r"[^a-z0-9]", "", norm(it["titulo"]))[:80]
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        unicos.append(it)
+    lista = unicos[: cfg.get("maximo", 300)]
     pacote = {"quando": agora(), "dias": cfg.get("dias", 30), "itens": lista, "por_fonte": status,
               "fontes": [{"nome": f["nome"], "site": f["site"]} for f in cfg["fontes"]],
               "temas": {k: t["nome"] for k, t in temas.items()} | {"geral": "Extrema-direita em geral"}}

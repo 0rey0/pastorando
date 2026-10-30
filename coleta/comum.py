@@ -25,7 +25,10 @@ UA = "EspiaCE/1.0 (plataforma civica de transparencia; github.com)"
 FALSO = {}
 
 
-def get(url, params=None, tipo="json", tentativas=4, aceitar="application/json", cabecalhos=None):
+DIAG = {}  # anotações para descobrir problemas; vão para meta.json
+
+
+def get(url, params=None, tipo="json", tentativas=4, aceitar="application/json", cabecalhos=None, timeout=90):
     """Baixa uma URL com novas tentativas. tipo='json' devolve objeto; 'bytes' devolve bytes."""
     if params:
         url = url + ("&" if "?" in url else "?") + urllib.parse.urlencode(params)
@@ -42,7 +45,7 @@ def get(url, params=None, tipo="json", tentativas=4, aceitar="application/json",
             h = {"User-Agent": UA, "Accept": aceitar}
             h.update(cabecalhos or {})
             req = urllib.request.Request(url, headers=h)
-            with urllib.request.urlopen(req, timeout=90) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 bruto = r.read()
             if tipo == "json":
                 return json.loads(bruto.decode("utf-8"))
