@@ -37,7 +37,7 @@ NOMES_EXTRA = {
     "radar": "Radar do Retrocesso (Câmara e ALECE)",
     "municipios": "IBGE Cidades (IDHM, renda, saúde, educação das cidades)",
     "noticias": "Jornais (O Povo, Diário do Nordeste, Folha, Estadão, G1)",
-    "plano": "Plano de ação (TSE 2026 por zona eleitoral e bairro)",
+    "plano": "Contra-atacar (TSE 2026 por zona eleitoral e bairro)",
     "tendencias": "Google Trends (buscas sobre a extrema-direita)",
 }
 

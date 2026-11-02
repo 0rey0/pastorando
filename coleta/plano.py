@@ -1,4 +1,4 @@
-"""Plano de ação: onde a direita e a extrema-direita foram mais votadas no Ceará em 2026, por zona eleitoral e por bairro.
+"""Contra-atacar: onde a direita e a extrema-direita foram mais votadas no Ceará em 2026, por zona eleitoral e por bairro.
 
 Fonte: TSE, dados abertos dos resultados de 2026
   - votacao_candidato_munzona: votos de cada candidato por município e zona eleitoral (todos os cargos, 1º e 2º turno);
@@ -16,7 +16,7 @@ ANO = 2026
 SECAO = CDN + "/votacao_secao/votacao_secao_{a}_CE.zip"
 LOCAIS = CDN + "/eleitorado_locais_votacao/eleitorado_local_votacao_{a}.zip"
 DIAS = 20
-VERSAO = 2
+VERSAO = 3
 
 
 def _espectro(cfg):
@@ -138,7 +138,7 @@ def _bairros(por_sigla, partido_num, cfg):
         tt[g] = tt.get(g, 0) + q
     if not locais:
         return []
-    bairro = {}
+    bairro, coord = {}, {}
     try:
         cl = baixar(LOCAIS.format(a=ANO), "tse_locais_%d.zip" % ANO, dias=DIAS)
         for d in tabela(cl, r"eleitorado_local_votacao_%d\.(csv|txt)$" % ANO, filtro=lambda t: '"CE"' in t or ";CE;" in t or t.startswith("CE;")):
@@ -146,6 +146,12 @@ def _bairros(por_sigla, partido_num, cfg):
                 continue
             k = (_v(d, "NM_MUNICIPIO").title(), str(int(numero_br(_v(d, "NR_ZONA") or 0))), _v(d, "NR_LOCAL_VOTACAO"))
             bairro[k] = _v(d, "NM_BAIRRO").title()
+            try:
+                lat, lon = float(_v(d, "NR_LATITUDE").replace(",", ".")), float(_v(d, "NR_LONGITUDE").replace(",", "."))
+                if -8.5 < lat < -2.5 and -41.5 < lon < -37:  # dentro do Ceará
+                    coord[k] = (round(lat, 5), round(lon, 5))
+            except (TypeError, ValueError):
+                pass
     except Exception as e:  # noqa: BLE001
         DIAG["plano_locais"] = str(e)[:200]
         print("  TSE: bairros dos locais de votação indisponíveis:", e)
@@ -154,9 +160,47 @@ def _bairros(por_sigla, partido_num, cfg):
         t = x["t"].get(turno_max) or {}
         if not t.get("total"):
             continue
-        out.append({"municipio": mun, "zona": zona, "local": x["nome"], "endereco": x["endereco"], "bairro": bairro.get((mun, zona, loc), ""),
+        c = coord.get((mun, zona, loc))
+        b = bairro.get((mun, zona, loc), "")
+        if c and mun == "Fortaleza":  # em Fortaleza, o bairro oficial vem do mapa da prefeitura
+            b = _bairro_fortaleza(c[0], c[1]) or b
+        out.append({"municipio": mun, "zona": zona, "local": x["nome"], "endereco": x["endereco"], "bairro": b,
+                    "lat": c[0] if c else None, "lon": c[1] if c else None,
                     "votos": t["total"], "extrema": _pct(t.get("extrema_direita", 0), t["total"]), "turno": turno_max})
+    DIAG["plano_locais_com_coordenada"] = sum(1 for l in out if l["lat"])
     return out
+
+
+_BF = {}
+
+
+def _bairro_fortaleza(lat, lon):
+    """Em qual bairro de Fortaleza fica o ponto (limites da Prefeitura, em site/bairros-fortaleza.json)."""
+    if "f" not in _BF:
+        try:
+            import json
+            import os
+            from comum import RAIZ
+            with open(os.path.join(RAIZ, "site", "bairros-fortaleza.json"), encoding="utf-8") as f:
+                _BF["f"] = [(x["properties"]["nome"], x["geometry"]["coordinates"]) for x in json.load(f)["features"]]
+        except Exception:  # noqa: BLE001
+            _BF["f"] = []
+    for nome, polys in _BF["f"]:
+        for poly in polys:
+            if _dentro(lon, lat, poly[0]) and not any(_dentro(lon, lat, buraco) for buraco in poly[1:]):
+                return nome
+    return None
+
+
+def _dentro(x, y, anel):
+    dentro, j = False, len(anel) - 1
+    for i in range(len(anel)):
+        xi, yi = anel[i][0], anel[i][1]
+        xj, yj = anel[j][0], anel[j][1]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi:
+            dentro = not dentro
+        j = i
+    return dentro
 
 
 def _agrupa_bairros(locais):
@@ -180,7 +224,7 @@ def coletar(forcar=False):
     velho = ler("plano.json", {}) or {}
     if not forcar and velho.get("zonas") and velho.get("versao") == VERSAO and velho.get("medida") == "pres2_extrema" and velho.get("bairros") \
             and velho.get("epoch", 0) > time.time() - DIAS * 86400:
-        print("Plano de ação: usando o cálculo guardado de", velho.get("quando"))
+        print("Contra-atacar: usando o cálculo guardado de", velho.get("quando"))
         return velho
     cfg = config("espectro.json")
     por_sigla = _espectro(cfg)
@@ -196,7 +240,7 @@ def coletar(forcar=False):
             DIAG["plano_2turno"] = str(e)[:160]
         DIAG["plano_tem_2turno"] = any("presidente_2" in z["cargos"] for z in zonas.values())
     if not zonas:
-        print("Plano de ação: votos de %d por zona ainda não estão no TSE" % ANO)
+        print("Contra-atacar: votos de %d por zona ainda não estão no TSE" % ANO)
         return velho or None
     lista = [_indicadores(z) for z in zonas.values()]
     lista = [z for z in lista if z.get("forca") is not None]
@@ -217,10 +261,12 @@ def coletar(forcar=False):
               "explica": cfg.get("_leia", ""), "partidos": cfg["partidos"], "zonas": lista, "municipios": municipios,
               "bairros": sorted([b for b in bairros if b["votos"] >= 300], key=lambda b: -(b["extrema"] or 0))[:400],
               "locais": sorted([l for l in locais if l["votos"] >= 150], key=lambda l: -(l["extrema"] or 0))[:300],
+              # todos os locais com coordenada, para o mapa: [cidade, zona, local, bairro, lat, lon, votos, % extrema-direita]
+              "pontos": [[l["municipio"], l["zona"], l["local"], l["bairro"], l["lat"], l["lon"], l["votos"], l["extrema"]] for l in locais if l["lat"]],
               "fontes": {"zonas": fonte("TSE · votação por município e zona %d" % ANO, PAGINA["resultados"].format(a=ANO)),
                          "secao": fonte("TSE · votação por seção %d (CE)" % ANO, SECAO.format(a=ANO)),
                          "locais": fonte("TSE · locais de votação %d" % ANO, LOCAIS.format(a=ANO)),
                          "zonas_ce": fonte("TRE-CE · endereços dos cartórios e zonas eleitorais", "https://www.tre-ce.jus.br/eleitor/zonas-eleitorais")}}
     salvar("plano.json", pacote)
-    print("Plano de ação: %d zonas, %d bairros, %d locais de votação" % (len(lista), len(pacote["bairros"]), len(pacote["locais"])))
+    print("Contra-atacar: %d zonas, %d bairros, %d locais de votação" % (len(lista), len(pacote["bairros"]), len(pacote["locais"])))
     return pacote

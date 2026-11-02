@@ -216,12 +216,12 @@ siconfi = {"items": [{"conta": f, "coluna": COL, "valor": v} for f, v in [("Saú
 radar_det = {"dados": {"id": 5005, "siglaTipo": "PL", "numero": 105, "ano": ANO, "ementa": EMENTAS[5],
                        "statusProposicao": {"dataHora": "%d-10-20T10:00" % ANO, "siglaOrgao": "PLEN", "regime": "Urgência (Art. 155, RICD)", "descricaoSituacao": "Pronta para Pauta no PLENÁRIO (PLEN)", "descricaoTramitacao": "Aprovado requerimento de urgência"}}}
 radar_aut = {"dados": [{"nome": "Ana Exemplo", "tipo": "Deputado"}, {"nome": "Fulano de Outro Estado", "tipo": "Deputado"}]}
-# Plano de ação: votos por seção e locais de votação (2026)
+# Contra-atacar: votos por seção e locais de votação (2026)
 secoes = [["CE", t, "FORTALEZA", z, sec, "PRESIDENTE", nr, q, loc, "ESCOLA %s" % loc, "RUA %s" % loc]
           for t in (1, 2) for z, sec, loc in ((1, 10, "1015"), (1, 11, "1015"), (2, 20, "1023")) for nr, q in (("22", 300 if loc == "1015" else 120), ("13", 150 if loc == "1015" else 330), ("95", 5))]
 tse_secao = zipa("tse_secao.zip", {"votacao_secao_2026_CE.csv": csv_tse(["SG_UF", "NR_TURNO", "NM_MUNICIPIO", "NR_ZONA", "NR_SECAO", "DS_CARGO", "NR_VOTAVEL", "QT_VOTOS", "NR_LOCAL_VOTACAO", "NM_LOCAL_VOTACAO", "DS_LOCAL_VOTACAO_ENDERECO"], secoes)})
-tse_locais = zipa("tse_locais.zip", {"eleitorado_local_votacao_2026.csv": csv_tse(["SG_UF", "NM_MUNICIPIO", "NR_ZONA", "NR_LOCAL_VOTACAO", "NM_BAIRRO"],
-    [["CE", "FORTALEZA", 1, "1015", "ALDEOTA"], ["CE", "FORTALEZA", 2, "1023", "BOM JARDIM"], ["SP", "SAO PAULO", 1, "1015", "CENTRO"]])})
+tse_locais = zipa("tse_locais.zip", {"eleitorado_local_votacao_2026.csv": csv_tse(["SG_UF", "NM_MUNICIPIO", "NR_ZONA", "NR_LOCAL_VOTACAO", "NM_BAIRRO", "NR_LATITUDE", "NR_LONGITUDE"],
+    [["CE", "FORTALEZA", 1, "1015", "ALDEOTA", "-3.7380", "-38.4930"], ["CE", "FORTALEZA", 2, "1023", "BOM JARDIM", "-3.7905", "-38.6000"], ["SP", "SAO PAULO", 1, "1015", "CENTRO", "-23.5", "-46.6"]])})
 trends_rss = grava("trends.xml", ('<?xml version="1.0"?><rss xmlns:ht="https://trends.google.com/trending/rss"><channel>'
     '<item><title>flavio bolsonaro</title><ht:approx_traffic>50000+</ht:approx_traffic><pubDate>Mon, 26 Oct %d 10:00:00 GMT</pubDate>'
     '<ht:news_item><ht:news_item_title>Flávio fala após derrota</ht:news_item_title><ht:news_item_url>https://jornal.exemplo/f</ht:news_item_url></ht:news_item></item>'
@@ -367,11 +367,12 @@ confere(any("c5005" in i["radar"] for i in no), "notícia não ligada ao projeto
 confere(any("c900" in i["pessoas"] for i in no), "notícia não ligada à deputada citada")
 confere(not any("Chuva" in i["titulo"] for i in no), "notícia sem relação entrou")
 confere(any(i["titulo"].endswith("Congresso") for i in no), "nome do jornal não saiu do título do Google")
-# plano de ação
+# contra-atacar
 pl = L("plano.json")
 confere(pl["zonas"] and pl["zonas"][0]["municipio"] == "Crato" and pl["zonas"][0]["pres2_extrema"] > 60, pl["zonas"][:2])
 confere(pl["bairros"] and pl["bairros"][0]["bairro"] == "Aldeota" and pl["bairros"][0]["extrema"] > 60, pl.get("bairros"))
 confere(pl["municipios"]["Crato"]["forca"] > pl["municipios"]["Sobral"]["forca"], pl["municipios"])
+confere(len(pl["pontos"]) == 2 and pl["pontos"][0][4] and pl["pontos"][0][3] in ("Aldeota", "Meireles", "Varjota", "Bom Jardim", "Granja Lisboa"), pl.get("pontos"))
 # Google Trends
 tr = L("tendencias.json")
 confere([x["busca"] for x in tr["em_alta"]] == ["flavio bolsonaro"], tr["em_alta"])
