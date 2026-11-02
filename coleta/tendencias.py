@@ -73,7 +73,9 @@ def coletar():
     try:
         novos = em_alta(cfg)
         vistos = {x["busca"] for x in novos}
-        pacote["em_alta"] = (novos + [x for x in pacote["em_alta"] if x["busca"] not in vistos])[:40]
+        termos = [norm(t) for t in cfg.get("filtro_em_alta", [])]
+        antigos = [x for x in pacote["em_alta"] if x["busca"] not in vistos and any(t in " " + norm(x["busca"]) + " " for t in termos)]
+        pacote["em_alta"] = (novos + antigos)[:40]
     except Exception as e:  # noqa: BLE001
         DIAG["trends_em_alta"] = str(e)[:200]
         print("  Google Trends (em alta) falhou:", e)
