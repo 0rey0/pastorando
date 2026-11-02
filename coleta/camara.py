@@ -140,6 +140,39 @@ def viagens(ano, ids, nomes=None):
     return por
 
 
+def gastos_cota_csv(ano, ids, nomes=None):
+    """Gastos de um ano inteiro pelo arquivo anual da cota (mais confiável que a API para anos passados). Devolve {id: [itens]}."""
+    try:
+        caminho = baixar(COTAS % ano, "camara_cotas_%d.zip" % ano, dias=30 if ano < datetime.date.today().year else 1)
+    except Exception as e:  # noqa: BLE001
+        DIAG.setdefault("camara_cota_csv", {})[str(ano)] = str(e)[:160]
+        return {}
+    alvo = {str(i) for i in ids}
+    por_nome = {norm(n): str(i) for i, n in (nomes or {}).items()}
+    por, idx = {}, {}
+    for c, l in linhas_csv_zip(caminho, ".csv", filtro=lambda t: '"CE"' in t or ";CE;" in t):
+        if c == "__cab__":
+            idx = {k: achar_coluna(l, *v) for k, v in {
+                "id": ("idecadastro",), "id2": ("nudeputadoid",), "nome": ("txnomeparlamentar",), "uf": ("sguf",), "mes": ("nummes",),
+                "tipo": ("txtdescricao",), "forn": ("txtfornecedor",), "cnpj": ("txtcnpjcpf",), "valor": ("vlrliquido",), "doc": ("urldocumento",)}.items()}
+            continue
+        try:
+            if l[idx["uf"]] != "CE":
+                continue
+            quem = next((l[idx[k]] for k in ("id", "id2") if idx.get(k) is not None and l[idx[k]] in alvo), None)
+            if not quem and idx.get("nome") is not None:
+                quem = por_nome.get(norm(l[idx["nome"]]))
+            if not quem:
+                continue
+            por.setdefault(quem, []).append({"mes": int(numero_br(l[idx["mes"]]) or 0), "categoria": (l[idx["tipo"]] or "Outros").strip().rstrip(".").capitalize(),
+                                             "fornecedor": (l[idx["forn"]] or "").strip(), "cnpj": l[idx["cnpj"]] if idx.get("cnpj") is not None else "",
+                                             "valor": numero_br(l[idx["valor"]]), "url": l[idx["doc"]] if idx.get("doc") is not None and idx["doc"] < len(l) else ""})
+        except (IndexError, TypeError, ValueError):
+            continue
+    DIAG.setdefault("camara_cota_csv", {})[str(ano)] = {"deputados": len(por), "lancamentos": sum(len(v) for v in por.values())}
+    return por
+
+
 def votacoes(ids_ce, hoje, meses=6, maximo=150):
     """Votações nominais do plenário nos últimos meses, só com os votos dos deputados do Ceará."""
     lista = []
@@ -194,6 +227,7 @@ def coletar(ano=None):
     deps = deputados()
     print("Câmara: %d deputados do Ceará" % len(deps))
     via = viagens(ano, [d["id"] for d in deps], {d["id"]: d.get("nome", "") for d in deps})
+    antigos = {}
     pessoas = []
     for d in deps:
         id_ = d["id"]
@@ -230,12 +264,18 @@ def coletar(ano=None):
             print("  gastos falharam para", d.get("nome"), e)
         for a in range(INICIO_MANDATO["camara"], ano):  # anos anteriores do mandato (guardados depois da 1ª vez)
             if not gastos_ano_guardado(pid, a):
-                try:
+                if a not in antigos:
+                    antigos[a] = gastos_cota_csv(a, [x["id"] for x in deps], {x["id"]: x.get("nome", "") for x in deps})
+                itens = antigos[a].get(str(id_))
+                if itens:
+                    guardar_gastos_ano(pid, a, resumir_gastos(itens))
+                    continue
+                try:  # plano B: a API
                     g = gastos(id_, a)
                     if g["n"]:
                         guardar_gastos_ano(pid, a, g)
                 except Exception as e:  # noqa: BLE001
-                    print("  gastos de %d falharam para %s: %s" % (a, d.get("nome"), e))
+                    DIAG.setdefault("camara_gastos_api", {})["%s/%d" % (id_, a)] = str(e)[:120]
         juntar_anos(p, ano)
         try:
             p["projetos"] = projetos(id_, ano)

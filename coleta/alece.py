@@ -292,13 +292,16 @@ def coletar(ano=None):
                                    "projetos": fonte("ALECE · proposições em tramitação (PDF de cada uma)", "https://www.al.ce.gov.br/legislativo")}})
     # anos anteriores do mandato: um CSV por mês (só na primeira vez; depois fica guardado)
     for a in range(INICIO_MANDATO["alece"], ano):
-        if all(gastos_ano_guardado(p["id"], a) for p in pessoas):
+        if gastos_ano_guardado("_alece_ano", a) or all(gastos_ano_guardado(p["id"], a) for p in pessoas):
             continue
         doano = {}
         for m in range(1, 13):
             try:
                 for it in mes(a, m):
-                    doano.setdefault("a-" + slug(it.pop("deputado")), []).append(it)
+                    nome_antigo = it.pop("deputado")
+                    alvo = next((p for p in pessoas if slug(p["nome"]) == slug(nome_antigo)), None) or \
+                        casar_nome(nome_antigo, pessoas, chave=lambda p: [p["nome"]], minimo=0.8)[0]
+                    doano.setdefault(alvo["id"] if alvo else "a-" + slug(nome_antigo), []).append(it)
             except Exception as e:  # noqa: BLE001
                 print("  ALECE %02d/%d falhou: %s" % (m, a, e))
         for pid, itens in doano.items():
@@ -306,6 +309,8 @@ def coletar(ano=None):
             g["teto_periodo"] = round(TETO_MENSAL * max(1, len(g["meses"])), 2)
             g["pct_teto"] = round(100 * g["total"] / g["teto_periodo"], 1) if g["teto_periodo"] else None
             guardar_gastos_ano(pid, a, g)
+        if doano:
+            guardar_gastos_ano("_alece_ano", a, {"total": 0, "n": 0})  # marca o ano como lido
     for p in pessoas:
         juntar_anos(p, ano)
     print("ALECE: %d deputados com Verba de Desempenho em %d" % (len(pessoas), ano))
