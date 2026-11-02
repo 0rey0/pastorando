@@ -3,7 +3,7 @@ import datetime
 import re
 
 from comum import (DIAG, achar_coluna, baixar, classificar, fonte, foto_existente, get, homenagem, linhas_csv_zip, norm,
-                   numero_br, resumir_gastos, salvar_foto)
+                   numero_br, resumir_gastos, salvar_foto, INICIO_MANDATO, gastos_ano_guardado, guardar_gastos_ano, juntar_anos)
 
 BASE = "https://dadosabertos.camara.leg.br/api/v2"
 SITE = "https://www.camara.leg.br"
@@ -228,6 +228,15 @@ def coletar(ano=None):
             p["gastos"] = gastos(id_, ano)
         except Exception as e:  # noqa: BLE001
             print("  gastos falharam para", d.get("nome"), e)
+        for a in range(INICIO_MANDATO["camara"], ano):  # anos anteriores do mandato (guardados depois da 1ª vez)
+            if not gastos_ano_guardado(pid, a):
+                try:
+                    g = gastos(id_, a)
+                    if g["n"]:
+                        guardar_gastos_ano(pid, a, g)
+                except Exception as e:  # noqa: BLE001
+                    print("  gastos de %d falharam para %s: %s" % (a, d.get("nome"), e))
+        juntar_anos(p, ano)
         try:
             p["projetos"] = projetos(id_, ano)
         except Exception as e:  # noqa: BLE001

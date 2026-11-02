@@ -45,6 +45,7 @@ const P = {
   radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1"/>',
   jornal:'<path d="M4 5h13v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v10a2 2 0 0 1-2 2"/><path d="M7.5 9h6M7.5 12.5h6M7.5 16h4"/>',
   alvo:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>',
+  bandeira:'<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
   grade:'<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
   rede:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'
 };
@@ -176,7 +177,7 @@ function mapaCE(valores, o){ o = o||{};
   const fmt = o.fmt || function(v){ return NUM.format(v); };
   let s = '<div class="mapa-ce'+(o.clique?" clic":"")+'"><svg viewBox="'+MAPA.viewBox+'" role="img" aria-label="'+esc(o.rot||"Mapa do Ceará por município")+'">';
   Object.keys(MAPA.municipios).forEach(function(n){ const m = MAPA.municipios[n], v = V[n]||0, sel = o.sel && chaveMun(o.sel)===chaveMun(n);
-    s += '<path d="'+m.d+'" class="s'+faixa(v)+(sel?" sel":"")+'" data-dica="<b>'+esc(n)+'</b><br>'+esc(v?fmt(v):(o.semValor||"sem registro"))+'"'+(o.clique?' data-mun="'+esc(n)+'"':'')+'/>'; });
+    s += '<path d="'+m.d+'" class="s'+faixa(v)+(sel?" sel":"")+'" data-dica="<b>'+esc(n)+'</b><br>'+esc(v?fmt(v):(o.semValor||"sem registro"))+'"'+(o.clique||o.prefixo?' data-mun="'+esc(n)+'"'+(o.prefixo?' data-pref="'+esc(o.prefixo)+'"':''):'')+'/>'; });
   if (o.sel && MAPA_IDX[chaveMun(o.sel)]){ const c = MAPA.municipios[MAPA_IDX[chaveMun(o.sel)]].c; s += '<circle cx="'+c[0]+'" cy="'+c[1]+'" r="7" class="alvo"/>'; }
   const fz = MAPA.municipios["Fortaleza"]; if (fz) s += '<circle cx="'+fz.c[0]+'" cy="'+fz.c[1]+'" r="3.5" class="cap"/><text x="'+(fz.c[0]+8)+'" y="'+(fz.c[1]-6)+'" class="cap-t">Fortaleza</text>';
   s += '</svg>';
@@ -185,7 +186,7 @@ function mapaCE(valores, o){ o = o||{};
   const top = Object.keys(V).map(function(n){ return {n:n, v:V[n]}; }).sort(function(a,b){return b.v-a.v;});
   s += '<details class="como-tab"><summary>Ver como tabela</summary>'+tabela([{t:"Cidade",k:"n",fmt:function(v){ return o.clique?'<a href="#cidade-'+encodeURIComponent(v)+'">'+esc(v)+'</a>':esc(v); }},{t:o.colValor||"Valor",k:"v",num:true,fmt:function(v){return esc(fmt(v));}}], top, {ord:1, limite:10})+'</details></div>';
   return s; }
-document.addEventListener("click", function(e){ const p = e.target.closest && e.target.closest("[data-mun]"); if (p) location.hash = "cidade-"+encodeURIComponent(p.getAttribute("data-mun")); });
+document.addEventListener("click", function(e){ const p = e.target.closest && e.target.closest("[data-mun]"); if (p) location.hash = (p.getAttribute("data-pref")||"cidade-")+encodeURIComponent(p.getAttribute("data-mun")); });
 /* dispersão: [{x, y, r (rótulo), h (link), id}] eixos 0–100 */
 function dispersao(pts, o){ o = o||{}; const W = 360, H = 260, ml = 34, mb = 34, mt = 10, mr = 10;
   const X = function(v){ return ml + (W-ml-mr)*v/100; }, Y = function(v){ return mt + (H-mt-mb)*(1-v/100); };
@@ -202,8 +203,8 @@ function barrasPar(cats, a, b, na, nb){ return '<ul class="legenda-g"><li><i cla
 function carregar(){
   const E = window.__DADOS__;
   const j = function(n, pasta){ if (E && E[n]) return Promise.resolve(E[n]); return fetch((pasta==null?"dados/":pasta)+n, {cache:"no-cache"}).then(function(r){ if (!r.ok) throw new Error(n); return r.json(); }); };
-  Promise.all([j("parlamentares.json"), j("votacoes.json").catch(function(){return [];}), j("meta.json").catch(function(){return {};}), j("governo.json").catch(function(){return null;}), j("eleicao.json").catch(function(){return null;}), j("mapa-ce.json","").catch(function(){return null;}), j("radar.json").catch(function(){return null;}), j("municipios.json").catch(function(){return null;}), j("noticias.json").catch(function(){return null;})]).then(function(r){
-    D.pessoas = r[0] || []; D.votacoes = r[1] || []; D.meta = r[2] || {}; D.gov = r[3]; D.ele = r[4]; prepMapa(r[5]); D.radar = r[6] || {itens:[], temas:{}, etapas:[]}; D.mun = r[7] || {municipios:{}, indicadores:{}}; D.not = r[8] || {itens:[]};
+  Promise.all([j("parlamentares.json"), j("votacoes.json").catch(function(){return [];}), j("meta.json").catch(function(){return {};}), j("governo.json").catch(function(){return null;}), j("eleicao.json").catch(function(){return null;}), j("mapa-ce.json","").catch(function(){return null;}), j("radar.json").catch(function(){return null;}), j("municipios.json").catch(function(){return null;}), j("noticias.json").catch(function(){return null;}), j("plano.json").catch(function(){return null;}), j("tendencias.json").catch(function(){return null;})]).then(function(r){
+    D.pessoas = r[0] || []; D.votacoes = r[1] || []; D.meta = r[2] || {}; D.gov = r[3]; D.ele = r[4]; prepMapa(r[5]); D.radar = r[6] || {itens:[], temas:{}, etapas:[]}; D.mun = r[7] || {municipios:{}, indicadores:{}}; D.not = r[8] || {itens:[]}; D.plano = r[9]; D.tr = r[10];
     D.pessoas.forEach(function(p){ D.porId[p.id] = p; D.votosDe[p.id] = []; });
     D.votacoes.forEach(function(v){ Object.keys(v.votos||{}).forEach(function(id){ if (D.votosDe[id]) D.votosDe[id].push(v); }); });
     if (D.meta.atualizado) document.getElementById("atual").textContent = " Última atualização: "+D.meta.atualizado.replace("T"," às ")+".";
@@ -224,8 +225,8 @@ function avisoNavegador(){
 
 /* ---------- topo, menu e busca ---------- */
 const MENU = [["inicio","casa","Início"],["radar","radar","Radar"],["alece","alece","Assembleia"],["camara","camara","Câmara"],["senado","senado","Senado"],["governo","gov","Governo"],
-  ["noticias","jornal","No noticiário"],["cidade","mapa","Sua cidade"],["prioridades","alvo","Áreas prioritárias"],["gastos-todos","moeda","Gastos"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],
-  ["comparar","comparar","Comparar"],["eleitos","urnaN","Eleitos 2026"],["seguindo","sino","Seguindo"],["dados","dados","Dados abertos"],["sobre","info","Sobre"]];
+  ["plano","bandeira","Plano de ação"],["noticias","jornal","No noticiário"],["buscas","lupa","Buscas no Google"],["cidade","mapa","Sua cidade"],["prioridades","alvo","Áreas prioritárias"],["gastos-todos","moeda","Gastos"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],
+  ["comparar","comparar","Comparar"],["eleitos","urnaN","Eleitos 2026"],["seguindo","sino","Seguindo"],["dados","dados","Dados abertos"],["corrigir","doc","Pedir correção"],["sobre","info","Sobre"]];
 const ABAS = [["inicio","casa","Início"],["politicos","vazio","Políticos"],["radar","radar","Radar"],["cidade","mapa","Cidades"],["mais","grade","Mais"]];
 function montaMenu(){
   document.getElementById("abas").innerHTML = ABAS.map(function(m){ return m[0]==="mais" ? '<button type="button" id="abaMais">'+I("grade")+'<span>'+m[2]+'</span></button>' : '<a href="#'+m[0]+'" data-r="'+m[0]+'">'+I(m[1])+'<span>'+m[2]+'</span></a>'; }).join("");
@@ -250,7 +251,7 @@ function montaBusca(el, grande){
   sQ.onkeydown = function(e){ if (e.key==="Enter"){ const a = sSug.querySelector("a"); if (a){ location.hash = a.getAttribute("href"); sQ.blur(); } } };
   sQ.onblur = function(){ setTimeout(function(){ sSug.classList.remove("on"); },200); };
 }
-const ATALHOS = [["radar","radar","Radar"],["noticias","jornal","No noticiário"],["cobrar","megafone","Cobrar"],["prioridades","alvo","Áreas prioritárias"],["gastos","moeda","Gastos"],["votos","urna","Votos"],["projetos","doc","Projetos"],["cidade","mapa","Sua cidade"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],["comparar","comparar","Comparar"],["eleitos","urnaN","Eleitos 2026"]];
+const ATALHOS = [["radar","radar","Radar"],["plano","bandeira","Plano de ação"],["noticias","jornal","No noticiário"],["buscas","lupa","Buscas no Google"],["cobrar","megafone","Cobrar"],["prioridades","alvo","Áreas prioritárias"],["gastos","moeda","Gastos"],["votos","urna","Votos"],["projetos","doc","Projetos"],["cidade","mapa","Sua cidade"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],["comparar","comparar","Comparar"],["eleitos","urnaN","Eleitos 2026"]];
 function topo(inicio){
   document.body.classList.toggle("na-inicio", !!inicio);
   document.getElementById("buscaTopo").innerHTML = "";
@@ -396,6 +397,7 @@ function casaPag(c, ver){
       tabela([{t:"Nome", k:"nome", fmt:function(v,p){ return '<a class="tb-p" href="#p-'+esc(p.id)+'">'+av(p)+'<span>'+esc(v)+(p.fora_exercicio?'<small>licenciado</small>':'')+'</span></a>'; }},
               {t:"Partido", k:"partido"},
               {t:"Gastos "+ANO, k:"_g", num:true, ordv:function(p){ return p.gastos&&p.gastos.total; }, fmt:function(v,p){ return p.gastos ? mil(p.gastos.total) : '—'; }},
+              {t:"No mandato", k:"_gm", num:true, ordv:function(p){ return p.gastos_mandato&&p.gastos_mandato.total; }, fmt:function(v,p){ return p.gastos_mandato ? mil(p.gastos_mandato.total) : '—'; }},
               {t:L.some(function(p){return p.presenca;})?"Presença":"Participação", k:"_p", num:true, ordv:function(p){ return p.presenca?p.presenca.pct:participacao(p); }, fmt:function(v,p){ const x = p.presenca?p.presenca.pct:participacao(p); return x==null?'—':pct(x); }},
               {t:"Projetos de verdade", k:"_pr", num:true, ordv:function(p){ return (p.projetos||[]).filter(function(x){return !x.homenagem;}).length; }, fmt:function(v,p){ return p.projetos ? (p.projetos.filter(function(x){return !x.homenagem;}).length+' de '+p.projetos.length) : '—'; }}],
              todos, {ord:2, limite:15})+'</div><div id="vLista" hidden>'+listaCasa(todos)+'</div>', '', "qt")+
@@ -449,11 +451,13 @@ function quadroPromessas(lista, titulo, fonte, tam){ if (!lista || !lista.length
           {t:"Situação", k:"status", fmt:function(v,x){ const s = ST_PROM[v||"aguardando"]||ST_PROM.aguardando; return '<span class="voto '+s[0]+'">'+s[1]+'</span>'+(x.prova_status&&x.prova_status!=="#"?fi(x.prova_status,"prova da situação"):''); }}], lista, {limite:8}), fonte, tam||"qt", "c-promessas"); }
 
 /* ---------- perfil ---------- */
+let anoGastos = null;
 function perfil(id){
   topo(false);
   const p = D.porId[id];
   if (!p){ app.innerHTML = '<a class="voltar" href="#inicio">'+I("volta")+'Início</a><div class="vazio">Não encontramos esse político nos dados atuais.</div>'; return; }
-  const C = CASAS[p.casa], g = p.gastos, vots = D.votosDe[p.id] || [], pr = p.projetos, t = p.tse || {};
+  const GA = p.gastos_anos || {}, anoG = (anoGastos && GA[anoGastos] && anoGastos !== String(ANO)) ? anoGastos : String(ANO);
+  const C = CASAS[p.casa], g = anoG === String(ANO) ? p.gastos : GA[anoG], vots = D.votosDe[p.id] || [], pr = p.projetos, t = p.tse || {};
   const nov = segue(p.id) && novidades(p), part = participacao(p);
   let h = '<a class="voltar" href="#'+p.casa+'">'+I("volta")+C.longo+'</a>'+
   '<div class="perfil-topo"><div class="perfil">'+av(p,true)+'<div><span class="chip verm">'+I(C.ic)+C.cargo+'</span>'+fi(fp(p,"perfil"))+'<h1 style="margin-top:6px">'+esc(p.nome)+(fp(p,"foto")?fi(fp(p,"foto"),"foto"):'')+'</h1><div class="meta">'+(p.partido?partido(p)+(p.partido_eleicao?' <small>(partido da eleição)</small>':'')+' · ':'')+'Ceará'+(p.fora_exercicio?' · <b>fora do mandato agora</b>':'')+'</div>'+redesHtml(p.redes, fp(p,"redes"))+'</div></div>'+
@@ -461,15 +465,22 @@ function perfil(id){
   (nov ? '<div class="info">'+I("sino")+'<span><b>Novidades desde sua última visita:</b> '+esc(nov.join(", "))+'.</span></div>' : '')+
   (t.em2026!==undefined ? '<div class="olho" style="background:var(--anil-suave);border-color:var(--anil)">'+I("urnaN")+'<p>'+(t.em2026 ? '<b>Em 2026:</b> concorreu a '+esc(t.em2026.cargo.toLowerCase())+' pelo '+esc(t.em2026.partido)+' · <b>'+esc(t.em2026.situacao)+'</b>' : '<b>Em 2026:</b> não encontramos candidatura no Ceará.')+fi(((D.ele||{}).fontes||{})["2026"]&&D.ele.fontes["2026"].candidatos,"TSE · candidatos 2026")+'</p></div>' : '')+
   kpis([
-        g ? {ic:"moeda", r:"Gastos em "+ANO, v:mil(g.total), s:g.pct_teto!=null?pct(g.pct_teto)+" do limite":g.n+" lançamentos", f:fp(p,"gastos"), tom:g.pct_teto>85?"alerta":""} : null,
+        p.gastos_mandato && p.gastos_mandato.anos > 1 ? {ic:"moeda", r:"Gastos no mandato", v:mil(p.gastos_mandato.total), s:"de "+p.gastos_mandato.desde+" a "+ANO, f:fp(p,"gastos")} : null,
+        g ? {ic:"moeda", r:"Gastos em "+anoG, v:mil(g.total), s:g.pct_teto!=null?pct(g.pct_teto)+" do limite":g.n+" lançamentos", f:fp(p,"gastos"), tom:g.pct_teto>85?"alerta":""} : null,
         p.presenca ? {ic:"presenca", r:"Presença", v:pct(p.presenca.pct), s:p.presenca.nao_justificadas+" faltas sem justificativa", f:fp(p,"presenca"), tom:p.presenca.pct<75?"alerta":""} : part!=null ? {ic:"presenca", r:"Participação nas votações", v:pct(part), s:"votações nominais", f:fp(p,"votos")} : null,
         pr ? {ic:"doc", r:"Projetos de verdade em "+ANO, v:pr.filter(function(x){return !x.homenagem;}).length, s:pr.filter(function(x){return x.homenagem;}).length+" só de homenagem", f:fp(p,"projetos")} : null,
         p.votos ? {ic:"mapa", r:"Votos em "+p.votos.ano, v:NUM.format(p.votos.total), s:(p.votos.n_municipios||"")+" cidades", f:fp(p,"votos")} : null])+
   '<div class="quadros">';
   /* Gastos */
+  if (Object.keys(GA).length > 1){
+    const anos = Object.keys(GA).sort();
+    h += quadro("moeda","c1","Gastos em cada ano do mandato", '<div class="filtros" style="margin:0 0 6px" role="group" aria-label="Escolha o ano">'+anos.map(function(a){ return '<button type="button" class="chipbtn" data-ano-g="'+a+'" aria-pressed="'+(a===anoG)+'">'+a+'</button>'; }).join("")+'</div>'+
+      colunas(anos.map(function(a,i){ return {r:a, v:GA[a].total, t:mil(GA[a].total), d:a+": "+BRL.format(GA[a].total)+(String(ANO)===a?" (até agora)":"")}; }), {eixo:milCurto, rot:"Gastos por ano", destaque:anos.indexOf(anoG)})+
+      '<p class="frase">No mandato inteiro: <b>'+mil(p.gastos_mandato.total)+'</b>, uma média de '+mil(p.gastos_mandato.total/anos.length)+' por ano. Toque num ano para ver com o que foi gasto.</p>', fi(fp(p,"gastos")), "", "c-gastos-anos");
+  }
   if (g){
     const serie = MESES.slice(0, Math.max.apply(null, g.meses.concat([1]))).map(function(m,i){ const v = (g.por_mes||{})[String(i+1)]||0; return {r:m, v:v, t:mil(v), d:m+": "+BRL.format(v)}; });
-    h += quadro("moeda","c1","Gastos mês a mês em "+ANO, colunas(serie, {eixo:milCurto, rot:"Gastos por mês"})+(g.teto_periodo?'<p class="frase">Limite da verba: '+mil(g.teto_periodo/Math.max(1,g.meses.length))+' por mês'+fi(fp(p,"teto"),"valor da verba")+'</p>':'')+
+    h += quadro("moeda","c1","Gastos mês a mês em "+anoG, colunas(serie, {eixo:milCurto, rot:"Gastos por mês"})+(g.teto_periodo?'<p class="frase">Limite da verba: '+mil(g.teto_periodo/Math.max(1,g.meses.length))+' por mês'+fi(fp(p,"teto"),"valor da verba")+'</p>':'')+
       (g.maior_fornecedor_pct >= 30 && g.fornecedores[0] ? '<div class="olho">'+I("olho")+'<p><b>Fique de olho:</b> um só fornecedor ('+esc(g.fornecedores[0][0])+') ficou com '+pct(g.maior_fornecedor_pct)+' dos gastos. Não é acusação; é algo que o gabinete pode explicar.</p></div>' : ''), fi(fp(p,"gastos")), "", "c-gastos");
     h += quadro("moeda","c1","Com o quê", barrasH(g.por_categoria.slice(0,7).map(function(x){ return {r:x[0], v:x[1], t:mil(x[1])}; })), fi(fp(p,"gastos")));
     h += quadro("moeda","c1","Quem mais recebeu", tabela([{t:"Fornecedor", k:0, fmt:function(v,l){ return esc(v)+(l[1]?'<small>CNPJ/CPF '+esc(l[1])+'</small>':''); }},{t:"Valor", k:2, num:true, fmt:function(v){ return mil(v); }},{t:"% do total", k:"_p", num:true, ordv:function(l){ return l[2]; }, fmt:function(v,l){ return pct(100*l[2]/g.total); }}], g.fornecedores, {ord:1, limite:6})+
@@ -529,10 +540,12 @@ function perfil(id){
     '<li><span>'+I("rss")+' <a href="feeds/'+esc(p.id)+'.xml">Feed de novidades (RSS)</a><small>Cole num leitor de RSS para receber avisos.</small></span></li></ul>'+redesHtml(p.redes, fp(p,"redes")), fi(fp(p,"perfil")), "", "c-contato");
   h += '</div>';
   if (!g && !vots.length && !pr && !p.votos) h += '<div class="vazio">Ainda não há dados publicados para '+esc(p.nome)+'.</div>';
+  h += '<p class="frase corr">'+I("doc")+'Achou algum dado errado sobre '+esc(p.nome)+'? <a href="#corrigir-'+esc(p.id)+'">Peça a correção</a>.</p>';
   app.innerHTML = h;
   document.getElementById("bSeg").onclick = function(){ alterna(p.id); this.setAttribute("aria-pressed",segue(p.id)); this.innerHTML = I(segue(p.id)?"ok":"mais")+(segue(p.id)?"Seguindo":"Seguir"); };
   document.getElementById("bCob").onclick = function(){ abreCobrar(p); };
   document.getElementById("bSto").onclick = function(){ abreStory(p); };
+  app.querySelectorAll("[data-ano-g]").forEach(function(b){ b.onclick = function(){ anoGastos = b.getAttribute("data-ano-g"); const y = window.scrollY; perfil(id); window.scrollTo(0, y); }; });
   if (segue(p.id)) setTimeout(function(){ marcaVisto(p); conta(); }, 1500);
   if (pendente){ const pe = pendente; pendente = null;
     if (pe.sec){ const el = document.getElementById(pe.sec); if (el){ setTimeout(function(){ el.scrollIntoView({behavior:"smooth",block:"start"}); },60); } else toast("Ainda não há esse dado para "+p.nome+"."); }
@@ -802,17 +815,26 @@ function compararPag(a, b){
 }
 
 /* ---------- listas gerais ---------- */
+let anoTodos = "mandato";
 function gastosTodos(){
   topo(false);
-  const L = D.pessoas.filter(function(p){ return p.gastos; });
-  const cats = {}; L.forEach(function(p){ p.gastos.por_categoria.forEach(function(x){ const k = x[0].replace(/\s*-\s*sigepa/i,"").replace(/^Passagens? a[ée]reas?.*$/i,"Passagens aéreas"); cats[k] = (cats[k]||0)+x[1]; }); });
-  app.innerHTML = '<a class="voltar" href="#inicio">'+I("volta")+'Início</a><h1>Gastos</h1><p class="sub">Verba de gabinete e cota parlamentar em '+ANO+'.</p>'+
-  kpis(["alece","camara","senado"].map(function(c){ const X = L.filter(function(p){return p.casa===c;}); return {ic:CASAS[c].ic, r:CASAS[c].longo, v:mil(gastoTotal(X)), s:X.length?"média de "+mil(gastoTotal(X)/X.length)+" por pessoa":"", href:c}; }))+
-  '<div class="quadros">'+quadro("moeda","c1","Todos, do maior para o menor", tabela([{t:"Nome", k:"nome", fmt:function(v,p){ return '<a class="tb-p" href="#p-'+esc(p.id)+'">'+av(p)+'<span>'+esc(v)+'<small>'+CASAS[p.casa].nome+'</small></span></a>'; }},
-      {t:"Gasto", k:"_g", num:true, ordv:function(p){ return p.gastos.total; }, fmt:function(v,p){ return mil(p.gastos.total)+fi(fp(p,"gastos")); }},
-      {t:"Por mês", k:"_m", num:true, ordv:function(p){ return p.gastos.total/Math.max(1,p.gastos.meses.length); }, fmt:function(v,p){ return mil(p.gastos.total/Math.max(1,p.gastos.meses.length)); }},
-      {t:"Maior fornecedor", k:"_f", num:true, ordv:function(p){ return p.gastos.maior_fornecedor_pct; }, fmt:function(v,p){ return pct(p.gastos.maior_fornecedor_pct); }}], L, {ord:1, limite:15}), '', "q2")+
-  quadro("moeda","c1","Com o que mais se gasta", barrasH(Object.keys(cats).sort(function(a,b){return cats[b]-cats[a];}).slice(0,10).map(function(k){ return {r:k, v:cats[k], t:mil(cats[k])}; })), '')+'</div>';
+  const doAno = function(p){ if (anoTodos === "mandato") return p.gastos_mandato ? {total:p.gastos_mandato.total, meses:[], n:0, por_categoria:[], maior_fornecedor_pct:null, anos:p.gastos_mandato.anos} : (p.gastos ? p.gastos : null);
+    return anoTodos === String(ANO) ? p.gastos : (p.gastos_anos||{})[anoTodos] || null; };
+  const anos = {}; D.pessoas.forEach(function(p){ Object.keys(p.gastos_anos||{}).forEach(function(a){ anos[a] = 1; }); }); anos[String(ANO)] = 1;
+  const L = D.pessoas.map(function(p){ return {p:p, g:doAno(p)}; }).filter(function(o){ return o.g && o.g.total; });
+  const tot = function(X){ return X.reduce(function(a,o){ return a+o.g.total; }, 0); };
+  const cats = {}; if (anoTodos !== "mandato") L.forEach(function(o){ (o.g.por_categoria||[]).forEach(function(x){ const k = x[0].replace(/\s*-\s*sigepa/i,"").replace(/^Passagens? a[ée]reas?.*$/i,"Passagens aéreas"); cats[k] = (cats[k]||0)+x[1]; }); });
+  const porAno = Object.keys(anos).sort().map(function(a){ const v = D.pessoas.reduce(function(s,p){ const x = a===String(ANO) ? p.gastos : (p.gastos_anos||{})[a]; return s + (x ? x.total : 0); }, 0); return {r:a, v:v, t:mil(v), d:a+": "+BRL.format(v)}; });
+  app.innerHTML = '<a class="voltar" href="#inicio">'+I("volta")+'Início</a><h1>Gastos</h1><p class="sub">Verba de gabinete e cota parlamentar de cada ano do mandato, com dado oficial de cada Casa.</p>'+
+  '<div class="filtros" role="group" aria-label="Escolha o período"><button type="button" class="chipbtn" data-anot="mandato" aria-pressed="'+(anoTodos==="mandato")+'">Mandato inteiro</button>'+Object.keys(anos).sort().map(function(a){ return '<button type="button" class="chipbtn" data-anot="'+a+'" aria-pressed="'+(anoTodos===a)+'">'+a+'</button>'; }).join("")+'</div>'+
+  kpis(["alece","camara","senado"].map(function(c){ const X = L.filter(function(o){return o.p.casa===c;}); return {ic:CASAS[c].ic, r:CASAS[c].longo, v:mil(tot(X)), s:X.length?"média de "+mil(tot(X)/X.length)+" por pessoa":"", href:c}; }))+
+  '<div class="quadros">'+quadro("moeda","c1",(anoTodos==="mandato"?"No mandato inteiro":"Em "+anoTodos)+", do maior para o menor", tabela([{t:"Nome", k:"nome", fmt:function(v,o){ return '<a class="tb-p" href="#p-'+esc(o.p.id)+'">'+av(o.p)+'<span>'+esc(o.p.nome)+'<small>'+CASAS[o.p.casa].nome+'</small></span></a>'; }, ordv:function(o){ return o.p.nome; }},
+      {t:"Gasto", k:"_g", num:true, ordv:function(o){ return o.g.total; }, fmt:function(v,o){ return mil(o.g.total)+fi(fp(o.p,"gastos")); }},
+      (anoTodos==="mandato" ? {t:"Anos", k:"_a", num:true, ordv:function(o){ return o.g.anos||1; }, fmt:function(v,o){ return o.g.anos||1; }} : {t:"Por mês", k:"_m", num:true, ordv:function(o){ return o.g.total/Math.max(1,(o.g.meses||[]).length); }, fmt:function(v,o){ return mil(o.g.total/Math.max(1,(o.g.meses||[]).length)); }}),
+      (anoTodos==="mandato" ? null : {t:"Maior fornecedor", k:"_f", num:true, ordv:function(o){ return o.g.maior_fornecedor_pct; }, fmt:function(v,o){ return o.g.maior_fornecedor_pct==null?"—":pct(o.g.maior_fornecedor_pct); }})].filter(Boolean), L, {ord:1, limite:15}), '', "q2")+
+  quadro("moeda","c1","Quanto todos gastaram por ano", colunas(porAno, {eixo:milCurto, rot:"Gastos de todos por ano"})+'<p class="frase">O ano de '+ANO+' ainda está em andamento.</p>', '')+
+  (Object.keys(cats).length ? quadro("moeda","c1","Com o que mais se gasta", barrasH(Object.keys(cats).sort(function(a,b){return cats[b]-cats[a];}).slice(0,10).map(function(k){ return {r:k, v:cats[k], t:mil(cats[k])}; })), '') : '')+'</div>';
+  app.querySelectorAll("[data-anot]").forEach(function(b){ b.onclick = function(){ anoTodos = b.getAttribute("data-anot"); gastosTodos(); }; });
 }
 function viagensTodas(){
   topo(false);
@@ -845,12 +867,17 @@ function eleitosPag(){
 }
 /* ---------- cidades: indicadores do IBGE, áreas prioritárias ---------- */
 function dadosCidade(c){ const M = (D.mun||{}).municipios||{}; const k = Object.keys(M).find(function(n){ return chaveMun(n)===chaveMun(c); }); return k ? M[k] : null; }
-function fmtInd(k, v){ if (v==null) return "—"; if (k.indexOf("idhm")===0) return String(v.toFixed(3)).replace(".",","); if (k==="pib_pc") return BRL.format(v); if (k==="renda_pc") return BRL.format(v); if (k==="pind" || k==="agua_esgoto") return pct(v); if (k==="pop") return NUM.format(Math.round(v)); if (k==="mort_inf") return String(v.toFixed(1)).replace(".",","); if (k==="escolar") return pct(v); if (k==="salario") return String(v.toFixed(1)).replace(".",",")+" sal. mín."; return NUM.format(v); }
+function fmtInd(k, v){ if (v==null) return "—"; if (k.indexOf("idhm")===0) return String(v.toFixed(3)).replace(".",","); if (k==="pib_pc") return BRL.format(v); if (k==="renda_pc") return BRL.format(v); if (["pind","agua_esgoto","alfabetizacao","esgoto_rede","agua_rede","lixo_coletado","pretos_pardos"].indexOf(k)>=0) return pct(v); if (k==="pop") return NUM.format(Math.round(v)); if (k==="mort_inf") return String(v.toFixed(1)).replace(".",","); if (k==="escolar") return pct(v); if (k==="salario") return String(v.toFixed(1)).replace(".",",")+" sal. mín."; return NUM.format(v); }
 function valoresInd(k){ const M = (D.mun||{}).municipios||{}, o = {}; Object.keys(M).forEach(function(n){ if (M[n][k]!=null) o[n] = M[n][k]; }); return o; }
 function mediana(arr){ const a = arr.filter(function(x){return x!=null;}).sort(function(x,y){return x-y;}); return a.length ? a[Math.floor(a.length/2)] : null; }
 function linkIBGE(c){ return "https://cidades.ibge.gov.br/brasil/ce/"+semAc(c).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+"/panorama"; }
-const MAPAS_CIDADE = {emendas:["Emendas pagas", function(){ return somaEmendasCidade(); }, mil, "R$ pagos desde 2023"], idhm:["IDHM", function(){ return valoresInd("idhm"); }, function(v){ return fmtInd("idhm",v); }, "IDHM: mais escuro, mais desenvolvido"],
-  prioridade:["Prioridade", function(){ return valoresInd("prioridade"); }, function(v){ return String(Math.round(v)); }, "Prioridade: mais escuro, mais precisa de atenção"], mort_inf:["Mortalidade infantil", function(){ return valoresInd("mort_inf"); }, function(v){ return fmtInd("mort_inf",v)+" por mil"; }, "Mais escuro: mais bebês morrem"]};
+const MAPAS_CIDADE = {emendas:["Emendas pagas", function(){ return somaEmendasCidade(); }, mil, "R$ pagos desde 2023"],
+  prioridade:["Prioridade", function(){ return valoresInd("prioridade"); }, function(v){ return String(Math.round(v)); }, "Prioridade: mais escuro, mais precisa de atenção"],
+  renda_pc:["Renda", function(){ return valoresInd("renda_pc"); }, function(v){ return fmtInd("renda_pc",v)+" por pessoa"; }, "Renda média por pessoa (Censo 2022): mais escuro, maior"],
+  esgoto_rede:["Esgoto", function(){ return valoresInd("esgoto_rede"); }, function(v){ return pct(v)+" das casas"; }, "Casas ligadas à rede de esgoto (Censo 2022): mais escuro, mais casas"],
+  alfabetizacao:["Alfabetização", function(){ return valoresInd("alfabetizacao"); }, function(v){ return pct(v); }, "Sabem ler e escrever, 15 anos ou mais (Censo 2022)"],
+  idhm:["IDHM", function(){ return valoresInd("idhm"); }, function(v){ return fmtInd("idhm",v); }, "IDHM (Censo 2010): mais escuro, mais desenvolvido"]};
+function anoInd(k){ const a = ((D.mun||{}).anos||{})[k]; return a ? (a==="2022"||a==="2010" ? "Censo "+a : a) : ""; }
 function cidadePag(cid){
   topo(false);
   const nomes = MAPA ? Object.keys(MAPA.municipios).sort(function(a,b){return a.localeCompare(b);}) : [];
@@ -868,9 +895,10 @@ function cidadePag(cid){
   '<select class="campo" id="cSel" aria-label="Escolha a cidade" style="margin-top:14px;max-width:420px"><option value="">Escolha a cidade</option>'+nomes.map(function(n){ return '<option'+(n===c?' selected':'')+'>'+esc(n)+'</option>'; }).join("")+'</select>';
   if (c && m){
     h += (m.pos_prioridade && m.pos_prioridade<=30 ? '<div class="olho" style="margin-top:6px">'+I("alvo")+'<p><b>Área prioritária:</b> '+esc(c)+' é a '+m.pos_prioridade+'ª cidade que mais precisa de atenção entre as '+total+' do Ceará, pelos números de desenvolvimento, renda, saúde e escola. <a href="#prioridades">Veja por quê</a>.</p></div>' : '')+
-    kpis([{ic:"vazio", r:"População", v:fmtInd("pop",m.pop), s:((D.mun.anos||{}).pop==="2010"?"Censo 2010":"IBGE"+((D.mun.anos||{}).pop?" · "+D.mun.anos.pop:"")), f:linkIBGE(c)},
+    kpis([{ic:"vazio", r:"População", v:fmtInd("pop",m.pop), s:anoInd("pop"), f:linkIBGE(c)},
           {ic:"alvo", r:"IDHM", v:fmtInd("idhm",m.idhm), s:(m.faixa_idhm?"desenvolvimento "+m.faixa_idhm:"")+((D.mun.anos||{}).idhm?" · "+D.mun.anos.idhm:""), f:(D.mun.fontes||{}).idhm, tom:m.idhm!=null&&m.idhm<.6?"alerta":""},
-          (m.pib_pc!=null ? {ic:"moeda", r:"PIB por pessoa", v:fmtInd("pib_pc",m.pib_pc), s:comp("pib_pc"), f:linkIBGE(c)} : {ic:"moeda", r:"Renda média por pessoa", v:fmtInd("renda_pc",m.renda_pc), s:"Censo 2010 · "+comp("renda_pc"), f:(D.mun.fontes||{}).idhm}),
+          {ic:"moeda", r:"Renda média por pessoa", v:fmtInd("renda_pc",m.renda_pc), s:anoInd("renda_pc")+" · "+comp("renda_pc"), f:linkIBGE(c)},
+          m.esgoto_rede!=null ? {ic:"casa", r:"Casas com esgoto da rede", v:fmtInd("esgoto_rede",m.esgoto_rede), s:anoInd("esgoto_rede")+" · "+comp("esgoto_rede"), f:linkIBGE(c), tom:m.esgoto_rede<30?"alerta":""} : null,
           {ic:"dinheiro", r:"Emendas por habitante", v:m.emendas_pc!=null?BRL2.format(m.emendas_pc):"—", s:"pagas desde 2023 · "+mil(m.emendas||0)+" no total", f:"https://portaldatransparencia.gov.br/emendas"}]);
   } else if (c) h += kpis([{ic:"dinheiro", r:"Emendas pagas desde 2023", v:mil(emTot), s:emen.length+" parlamentares mandaram"}]);
   h += '<div class="quadros">'+quadro("mapa","c2","Mapa do Ceará", '<div class="filtros" id="mModo" style="margin:0 0 4px" role="group" aria-label="O que mostrar no mapa">'+Object.keys(MAPAS_CIDADE).map(function(k){ return '<button type="button" class="chipbtn" data-modo="'+k+'" aria-pressed="'+(k===modo)+'">'+MAPAS_CIDADE[k][0]+'</button>'; }).join("")+'</div>'+
@@ -878,8 +906,8 @@ function cidadePag(cid){
   if (c && m){
     const linhas = ["idhm_r","idhm_l","idhm_e"].filter(function(k){ return m[k]!=null; });
     h += quadro("alvo","c4","Como vive o povo de "+esc(c), (linhas.length ? '<p style="margin:2px 0 0"><b>As três partes do IDHM</b></p>'+barrasH(linhas.map(function(k){ return {r:{idhm_r:"Renda",idhm_l:"Saúde e vida longa",idhm_e:"Educação"}[k], v:m[k], t:fmtInd(k,m[k]), tom:m[k]>=.7?"bom":m[k]<.6?"alerta":"", d:IND[k].nome+": "+fmtInd(k,m[k])}; }), {max:1}) : '')+
-      '<ul class="det" style="list-style:none;padding:0;margin:12px 0 0">'+["mort_inf","escolar","pind","renda_pc","salario"].filter(function(k){ return m[k]!=null; }).map(function(k){ return '<li><span>'+esc(IND[k].nome)+'<small>'+(IND[k].unidade==="%"?"":esc(IND[k].unidade))+(comp(k)?(IND[k].unidade==="%"?"":" · ")+comp(k):'')+'</small></span><span><b class="num">'+fmtInd(k,m[k])+'</b>'+fi(linkIBGE(c),"IBGE Cidades")+'</span></li>'; }).join("")+'</ul>'+
-      '<p class="fonte">O IDHM vai de 0 a 1: quanto mais perto de 1, melhor. É calculado pelo PNUD com dados do Censo.</p>', fi(linkIBGE(c),"IBGE Cidades: "+c));
+      '<ul class="det" style="list-style:none;padding:0;margin:12px 0 0">'+["alfabetizacao","agua_rede","lixo_coletado","pretos_pardos","pib_pc","mort_inf","escolar","pind","salario"].filter(function(k){ return m[k]!=null; }).map(function(k){ return '<li><span>'+esc(IND[k].nome)+'<small>'+anoInd(k)+(IND[k].unidade==="%"?"":" · "+esc(IND[k].unidade))+(comp(k)?(IND[k].unidade==="%"?"":" · ")+comp(k):'')+'</small></span><span><b class="num">'+fmtInd(k,m[k])+'</b>'+fi(linkIBGE(c),"IBGE Cidades")+'</span></li>'; }).join("")+'</ul>'+
+      '<p class="fonte">Os números de casas, renda, alfabetização e população são do Censo 2022 (IBGE). O IDHM, a mortalidade infantil, a escola de 6 a 14 anos e a extrema pobreza ainda são do Censo 2010, porque o PNUD não calculou esses números por cidade com o Censo 2022.</p>', fi(linkIBGE(c),"IBGE Cidades: "+c));
     h += quadro("urna","c4","Mais votados em "+esc(c)+" (2022)", ["alece","camara","senado"].map(function(casa){ const X = porCasa(casa).slice(0,5); return X.length ? '<p style="margin:10px 0 4px"><b>'+CASAS[casa].nome+'</b></p>'+barrasH(X.map(function(o){ return {r:o.p.nome, v:o.n, t:NUM.format(o.n), h:"#p-"+o.p.id, f:fi(fp(o.p,"votos"))}; })) : ''; }).join("") || '<p class="frase">Sem dados de votação.</p>', fi("https://dadosabertos.tse.jus.br/dataset/resultados-2022","TSE · resultados 2022"));
     h += quadro("dinheiro","c3","Quem mandou emendas para "+esc(c), (emen.length ? barrasH(emen.map(function(o){ return {r:o.p.nome, v:o.v, t:mil(o.v), h:"#p-"+o.p.id, s:CASAS[o.p.casa].nome}; })) : '<p class="frase">Nenhuma emenda paga registrada desde 2023.</p>')+
       '<div class="acoes"><button type="button" class="btn cheio" id="cCobra">'+I("megafone")+'Cobrar emendas para '+esc(c)+'</button></div>', fi("https://portaldatransparencia.gov.br/emendas","Portal da Transparência · emendas"));
@@ -897,18 +925,19 @@ function prioridadesPag(){
   const comPop = L.filter(function(x){ return x.emendas_pc!=null; });
   const medEm = mediana(comPop.map(function(x){ return x.emendas_pc; }));
   const esquecidas = L.slice(0,40).filter(function(x){ return x.emendas_pc!=null && medEm!=null && x.emendas_pc < medEm; }).slice(0,12);
-  app.innerHTML = '<h1>Áreas prioritárias</h1><p class="sub">As cidades do Ceará que mais precisam de atenção, pelos números oficiais de desenvolvimento humano, renda, mortalidade infantil, escola e salário. É para lá que o dinheiro público deveria ir primeiro.</p>'+
-  kpis([{ic:"alvo", r:"Cidades avaliadas", v:L.length, s:"com dados do IBGE"}, {ic:"alerta", r:"Prioridade máxima", v:L[0]?esc(L[0].nome):"—", s:L[0]?"IDHM "+fmtInd("idhm",L[0].idhm):"", href:L[0]?"cidade-"+encodeURIComponent(L[0].nome):null, tom:"alerta"},
+  app.innerHTML = '<h1>Áreas prioritárias</h1><p class="sub">As cidades do Ceará que mais precisam de atenção, pelos números oficiais do Censo 2022: renda, alfabetização, esgoto, água e coleta de lixo, mais o IDHM. É para lá que o dinheiro público deveria ir primeiro.</p>'+
+  kpis([{ic:"alvo", r:"Cidades avaliadas", v:L.length, s:"com dados do IBGE"}, {ic:"alerta", r:"Prioridade máxima", v:L[0]?esc(L[0].nome):"—", s:L[0]?"renda de "+fmtInd("renda_pc",L[0].renda_pc)+" por pessoa":"", href:L[0]?"cidade-"+encodeURIComponent(L[0].nome):null, tom:"alerta"},
         {ic:"dinheiro", r:"Precisam mais e recebem menos", v:esquecidas.length, s:"entre as 40 mais prioritárias, recebem menos emenda por habitante que a média"}])+
   '<div class="quadros">'+quadro("mapa","c2","Onde está a prioridade", mapaCE(valoresInd("prioridade"), {fmt:function(v){ return "prioridade "+Math.round(v)+" de 100"; }, clique:true, legenda:"Mais escuro: mais precisa de atenção", colValor:"Prioridade", fmtLeg:function(v){ return String(Math.round(v)); }}), fi((D.mun.fontes||{}).ibge), "q2")+
   (esquecidas.length ? quadro("alerta","c1","Precisam mais e recebem menos", '<p class="frase">Estão entre as 40 cidades que mais precisam e receberam menos emenda por habitante que a média do Ceará. Cobre a bancada.</p>'+
-    barrasH(esquecidas.map(function(x){ return {r:x.nome, v:x.emendas_pc||0, t:BRL.format(x.emendas_pc||0)+"/hab.", h:"#cidade-"+encodeURIComponent(x.nome), s:"prioridade "+x.pos_prioridade+"º · IDHM "+fmtInd("idhm",x.idhm), tom:"alerta"}; }))+
+    barrasH(esquecidas.map(function(x){ return {r:x.nome, v:x.emendas_pc||0, t:BRL.format(x.emendas_pc||0)+"/hab.", h:"#cidade-"+encodeURIComponent(x.nome), s:"prioridade "+x.pos_prioridade+"º · esgoto em "+fmtInd("esgoto_rede",x.esgoto_rede)+" das casas", tom:"alerta"}; }))+
     '<div class="acoes"><button type="button" class="btn cheio" id="pCobra">'+I("megafone")+'Cobrar emendas para essas cidades</button></div>', fi("https://portaldatransparencia.gov.br/emendas","Portal da Transparência · emendas")) : '')+
   quadro("alvo","c4","As 184 cidades, da que mais precisa para a que menos precisa", tabela([{t:"Cidade", k:"nome", fmt:function(v,x){ return '<a href="#cidade-'+encodeURIComponent(v)+'"><b>'+esc(v)+'</b></a><small>'+x.pos_prioridade+'º em prioridade</small>'; }},
-      {t:"IDHM", k:"idhm", num:true, fmt:function(v){ return fmtInd("idhm",v); }}, {t:"Mortalidade infantil", k:"mort_inf", num:true, fmt:function(v){ return fmtInd("mort_inf",v); }},
-      {t:"Na escola (6-14)", k:"escolar", num:true, fmt:function(v){ return fmtInd("escolar",v); }}, {t:"Extrema pobreza", k:"pind", num:true, fmt:function(v){ return fmtInd("pind",v); }},
+      {t:"Renda por pessoa", k:"renda_pc", num:true, fmt:function(v){ return fmtInd("renda_pc",v); }}, {t:"Alfabetização", k:"alfabetizacao", num:true, fmt:function(v){ return fmtInd("alfabetizacao",v); }},
+      {t:"Esgoto da rede", k:"esgoto_rede", num:true, fmt:function(v){ return fmtInd("esgoto_rede",v); }}, {t:"Água da rede", k:"agua_rede", num:true, fmt:function(v){ return fmtInd("agua_rede",v); }},
+      {t:"IDHM (2010)", k:"idhm", num:true, fmt:function(v){ return fmtInd("idhm",v); }},
       {t:"Emendas por hab.", k:"emendas_pc", num:true, fmt:function(v){ return v==null?"—":BRL2.format(v); }}, {t:"", k:"_i", semOrd:true, fmt:function(v,x){ return fi(linkIBGE(x.nome),"IBGE Cidades"); }}], L, {limite:20}), '', "qt")+
-  quadro("info","c2","Como calculamos a prioridade", '<p class="frase">Para cada cidade, vemos a posição dela entre as 184 do Ceará em cinco números oficiais: IDHM, IDHM Renda, mortalidade infantil, crianças na escola e pessoas em extrema pobreza. A prioridade é a média dessas posições, de 0 (melhor do estado) a 100 (pior do estado).</p><p class="frase">Fontes: IBGE Cidades e Atlas do Desenvolvimento Humano (PNUD). O IDHM disponível por cidade é do último Censo com esse cálculo.</p>', fi((D.mun.fontes||{}).api))+
+  quadro("info","c2","Como calculamos a prioridade", '<p class="frase">Para cada cidade, vemos a posição dela entre as 184 do Ceará em seis números oficiais: renda por pessoa, alfabetização, casas com esgoto da rede, com água da rede e com coleta de lixo (todos do Censo 2022), mais o IDHM (Censo 2010, o último calculado por cidade). A prioridade é a média dessas posições, de 0 (melhor do estado) a 100 (pior do estado).</p><p class="frase">Fontes: IBGE (Censo 2022) e Atlas do Desenvolvimento Humano (PNUD, Ipea, FJP).</p>', fi((D.mun.fontes||{}).censo))+
   '</div>';
   const pc = document.getElementById("pCobra"); if (pc) pc.onclick = function(){ abreCobrarCidade(esquecidas.slice(0,5).map(function(x){return x.nome;}).join(", ")); };
 }
@@ -937,15 +966,17 @@ function linhaNoticia(n, curto){ const r = (n.radar||[]).map(itemRadar).filter(B
 function noticiasPag(filtro){
   topo(false);
   const N = (D.not||{}).itens||[], fontes = ((D.not||{}).fontes||[]).map(function(f){ return f.nome; });
-  const L = filtro ? N.filter(function(n){ return n.fonte===filtro || (n.temas||[]).indexOf(filtro)>=0; }) : N;
+  const TP = (D.not||{}).tipos || {projetos:"Projetos e votações", falas:"Falas e ataques", planos:"Planos e expectativas"};
+  const L = filtro ? N.filter(function(n){ return n.fonte===filtro || (n.temas||[]).indexOf(filtro)>=0 || (n.tipos||[]).indexOf(filtro)>=0; }) : N;
   const cont = {}; N.forEach(function(n){ cont[n.fonte] = (cont[n.fonte]||0)+1; });
   const ct = {}; N.forEach(function(n){ (n.temas||[]).forEach(function(t){ ct[t] = (ct[t]||0)+1; }); });
-  app.innerHTML = '<div class="radar-topo"><span class="radar-ic">'+I("jornal")+'</span><div><h1>No noticiário</h1><p class="sub">O que os principais jornais publicaram nos últimos '+((D.not||{}).dias||30)+' dias sobre as pautas da extrema-direita. Leia no site do jornal, compartilhe e cobre antes que a pauta avance.</p></div></div>'+
+  app.innerHTML = '<div class="radar-topo"><span class="radar-ic">'+I("jornal")+'</span><div><h1>No noticiário</h1><p class="sub">O que os principais jornais publicaram nos últimos '+((D.not||{}).dias||30)+' dias sobre os projetos, as falas e os planos da extrema-direita. Leia no site do jornal, compartilhe e cobre antes que a pauta avance.</p></div></div>'+
   kpis([{ic:"jornal", r:"Notícias", v:N.length, s:"de "+fontes.length+" jornais"}, {ic:"radar", r:"Citam projetos do Radar", v:N.filter(function(n){return (n.radar||[]).length;}).length, href:"radar"}, {ic:"vazio", r:"Citam políticos do Ceará", v:N.filter(function(n){return (n.pessoas||[]).length;}).length}])+
   '<div class="filtros rola" role="group" aria-label="Filtrar por jornal"><a class="chipbtn" href="#noticias" aria-pressed="'+(!filtro)+'">Todas <small>'+N.length+'</small></a>'+fontes.map(function(f){ return '<a class="chipbtn" href="#noticias-'+encodeURIComponent(f)+'" aria-pressed="'+(filtro===f)+'">'+esc(f)+' <small>'+(cont[f]||0)+'</small></a>'; }).join("")+'</div>'+
+  '<div class="filtros rola" role="group" aria-label="Filtrar por tipo">'+Object.keys(TP).map(function(t){ const n = N.filter(function(x){ return (x.tipos||[]).indexOf(t)>=0; }).length; return '<a class="chipbtn" href="#noticias-'+t+'" aria-pressed="'+(filtro===t)+'">'+esc(TP[t])+' <small>'+n+'</small></a>'; }).join("")+'</div>'+
   '<div class="filtros" role="group" aria-label="Filtrar por tema">'+Object.keys(ct).sort(function(a,b){return ct[b]-ct[a];}).map(function(t){ return '<a class="chipbtn" href="#noticias-'+t+'" aria-pressed="'+(filtro===t)+'">'+esc(((D.not||{}).temas||{})[t]||t)+' <small>'+ct[t]+'</small></a>'; }).join("")+'</div>'+
   '<div class="quadros">'+quadro("jornal","c1",(filtro?esc(((D.not||{}).temas||{})[filtro]||filtro):"Últimas notícias"), L.length ? '<ul class="noticias">'+L.slice(0,80).map(function(n){ return linhaNoticia(n); }).join("")+'</ul>' : '<p class="frase">Nenhuma notícia nesse filtro.</p>', '', "q2")+
-  quadro("info","c2","De onde vêm as notícias", '<p class="frase">O robô lê, todo dia, o RSS público dos jornais e a busca de notícias filtrada pelo site de cada um: '+esc(fontes.join(", "))+'. Nenhum deles tem uma API aberta de notícias.</p><p class="frase">Entram só as notícias que falam das pautas do Radar. Guardamos o título, o link e a data; a reportagem completa fica no site do jornal.</p><p class="frase">A lista de jornais e de palavras fica no arquivo público <code>config/noticias.json</code>.</p>', '')+'</div>';
+  quadro("info","c2","De onde vêm as notícias", '<p class="frase">O robô lê, todo dia, o RSS público dos jornais e a busca de notícias filtrada pelo site de cada um: '+esc(fontes.join(", "))+'. Nenhum deles tem uma API aberta de notícias.</p><p class="frase">Entram só as notícias que citam a extrema-direita (bolsonarismo, seus líderes, os partidos e os políticos dela no Ceará) e tratam de um projeto, uma fala ou um plano. Colunas de opinião e cartas de leitor ficam de fora. Guardamos o título, o link e a data; a reportagem completa fica no site do jornal.</p><p class="frase">A lista de jornais e de palavras fica no arquivo público <code>config/noticias.json</code>.</p>', '')+'</div>';
 }
 
 /* ---------- seguindo ---------- */
@@ -1009,6 +1040,114 @@ function indice(h){
     window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - nav.offsetHeight - 12, behavior:"smooth"}); });
   if ("IntersectionObserver" in window){ const ob = new IntersectionObserver(function(es){ es.forEach(function(en){ if (en.isIntersecting){ nav.querySelectorAll("a").forEach(function(a){ const on = a.getAttribute("data-sec")===en.target.id; a.classList.toggle("on", on); if (on && a.scrollIntoView && nav.scrollWidth > nav.clientWidth) nav.scrollTo({left:a.offsetLeft-16, behavior:"smooth"}); }); } }); }, {rootMargin:"-30% 0px -60% 0px"}); qs.forEach(function(q){ ob.observe(q); }); }
 }
+/* ---------- Plano de ação: onde a extrema-direita foi mais votada em 2026 ---------- */
+function unicos(l){ const v = {}; return (l||[]).filter(function(x){ const k = semAc(x).replace(/\s/g,""); if (v[k]) return false; v[k] = 1; return true; }).join(", "); }
+function planoPag(sub){
+  topo(false);
+  const P = D.plano;
+  const cab = '<div class="radar-topo"><span class="radar-ic" style="background:var(--verde)">'+I("bandeira")+'</span><div><h1>Plano de ação</h1><p class="sub">Onde a extrema-direita teve mais votos no Ceará em 2026, zona por zona e bairro por bairro. É para lá que a militância precisa ir: conversar, ouvir e mostrar o que esses políticos fazem com o voto do povo.</p></div></div>';
+  if (!P || !(P.zonas||[]).length){ app.innerHTML = cab+'<div class="vazio">O robô ainda está juntando os resultados de 2026 do TSE por zona eleitoral. Volte depois da próxima atualização.</div>'; return; }
+  const Z = P.zonas, M = P.municipios || {}, medida = P.medida === "pres2_extrema" ? "no 2º turno para presidente" : "na média do 1º turno";
+  const fortes = Z.filter(function(z){ return z.forca >= 50; }), apertadas = Z.filter(function(z){ return z.forca >= 42 && z.forca < 50; });
+  const mun = function(z){ return z.municipio+" · zona "+z.zona; };
+  const lugar = sub ? decodeURIComponent(sub) : "";
+  const Zf = lugar ? Z.filter(function(z){ return z.municipio===lugar; }) : Z;
+  const B = (P.bairros||[]).filter(function(b){ return !lugar || b.municipio===lugar; }), Lc = (P.locais||[]).filter(function(l){ return !lugar || l.municipio===lugar; });
+  const cidades = Object.keys(M).sort(function(a,b){ return a.localeCompare(b); });
+  app.innerHTML = cab+
+  '<select class="campo" id="plSel" aria-label="Escolha a cidade" style="max-width:420px;margin-top:10px"><option value="">Todo o Ceará</option>'+cidades.map(function(c){ return '<option'+(c===lugar?' selected':'')+'>'+esc(c)+'</option>'; }).join("")+'</select>'+
+  kpis([{ic:"bandeira", r:"Zonas onde a extrema-direita venceu", v:fortes.length, s:"de "+Z.length+" zonas eleitorais do Ceará, "+medida, tom:"alerta"},
+        {ic:"alvo", r:"Zonas na disputa", v:apertadas.length, s:"a extrema-direita teve de 42% a 50%: dá para virar"},
+        Z[0] ? {ic:"mapa", r:"Zona mais forte da extrema-direita", v:esc(Z[0].municipio), s:"zona "+Z[0].zona+" · "+pct(Z[0].forca)} : null,
+        B[0] ? {ic:"casa", r:"Bairro mais forte", v:esc(B[0].bairro), s:esc(B[0].municipio)+" · "+pct(B[0].extrema)} : null])+
+  '<div class="quadros">'+
+  quadro("mapa","c2","Cidades pela força da extrema-direita", mapaCE(Object.keys(M).reduce(function(o,n){ if (M[n].forca!=null) o[n] = M[n].forca; return o; }, {}), {fmt:function(v){ return pct(v)+" para a extrema-direita"; }, legenda:"Mais escuro: mais votos na extrema-direita "+medida, colValor:"Extrema-direita", fmtLeg:function(v){ return Math.round(v)+"%"; }, prefixo:"plano-", sel:lugar}), fi((P.fontes||{}).zonas), "q2")+
+  quadro("alvo","c4","O que fazer", '<ol class="passos">'+
+    '<li><b>Escolha uma zona ou bairro da lista</b> e junte um grupo pequeno de quem mora ou trabalha lá.</li>'+
+    '<li><b>Leve informação, não briga.</b> Mostre no celular o que os deputados mais votados ali fazem com o dinheiro e com o voto (perfil de cada um aqui no EspiaCE).</li>'+
+    '<li><b>Fale do que pesa no bolso e na vida:</b> preço da comida, emprego, posto de saúde, escola. Use os números da página da cidade.</li>'+
+    '<li><b>Mostre o Radar do Retrocesso:</b> os projetos que os eleitos por ali assinam e o que eles mudam na vida das pessoas.</li>'+
+    '<li><b>Volte sempre.</b> Uma conversa por semana na mesma praça, feira ou escola vale mais que um panfleto só.</li></ol>'+
+    '<p class="frase">A ideia não é hostilizar quem votou diferente. É ouvir, explicar e convencer com fatos.</p>', '')+
+  quadro("bandeira","c1",(lugar?esc(lugar)+": zonas":"Zonas")+' onde a extrema-direita teve mais votos', tabela([
+      {t:"Zona", k:"zona", fmt:function(v,z){ return '<b>'+esc(z.municipio)+'</b><small>zona '+esc(z.zona)+' · '+NUM.format(z.eleitores_votaram||0)+' votos</small>'; }, ordv:function(z){ return z.municipio+z.zona; }},
+      {t:"Extrema-direita", k:"forca", num:true, fmt:function(v){ return '<span class="nota num '+(v>=50?"f4":v>=42?"f3":"f2")+'">'+pct(v)+'</span>'; }},
+      {t:"Deputados de extrema-direita", k:"dep_est_extrema", num:true, fmt:function(v,z){ return v==null?"—":pct(v)+'<small>estadual · federal '+(z.dep_fed_extrema==null?"—":pct(z.dep_fed_extrema))+'</small>'; }},
+      {t:"Mais votados da direita ali", k:"_mv", semOrd:true, fmt:function(v,z){ return (z.mais_votados_direita||[]).slice(0,2).map(function(c){ return esc(c.nome)+' <small>'+esc(c.partido)+' · '+esc(c.cargo)+' · '+NUM.format(c.votos)+'</small>'; }).join("") || "—"; }}], Zf, {ord:1, limite:15, cartao:true}), fi((P.fontes||{}).zonas), "qt")+
+  (B.length ? quadro("casa","c3",(lugar?esc(lugar)+": bairros":"Bairros")+' onde a extrema-direita teve mais votos', tabela([
+      {t:"Bairro", k:"bairro", fmt:function(v,b){ return '<b>'+esc(v)+'</b><small>'+esc(b.municipio)+' · zona '+esc(b.zonas.join(", "))+' · '+b.locais+' locais de votação</small>'; }},
+      {t:"Extrema-direita", k:"extrema", num:true, fmt:function(v){ return '<span class="nota num '+(v>=50?"f4":v>=42?"f3":"f2")+'">'+pct(v)+'</span>'; }},
+      {t:"Votos", k:"votos", num:true, fmt:function(v){ return NUM.format(v); }}], B, {ord:1, limite:15}), fi((P.fontes||{}).locais), "q2") : '')+
+  (Lc.length ? quadro("mapa","c2","Locais de votação para começar", '<p class="frase">Escolas e prédios onde a extrema-direita teve mais votos. São bons lugares para conversar com a vizinhança.</p>'+tabela([
+      {t:"Local", k:"local", fmt:function(v,l){ return '<b>'+esc(v)+'</b><small>'+esc(l.endereco||"")+(l.bairro?' · '+esc(l.bairro):'')+' · '+esc(l.municipio)+', zona '+esc(l.zona)+'</small>'; }},
+      {t:"Extrema-direita", k:"extrema", num:true, fmt:function(v){ return pct(v); }},
+      {t:"Votos", k:"votos", num:true, fmt:function(v){ return NUM.format(v); }}], Lc, {ord:1, limite:10}), fi((P.fontes||{}).secao)) : '')+
+  quadro("info","c2","Como medimos", '<p class="frase">Para cada zona eleitoral, somamos os votos do TSE de 2026 e vemos que parte foi para candidatos de partidos de extrema-direita '+medida+'. Os partidos de cada campo ficam no arquivo público <code>config/espectro.json</code>: extrema-direita = '+esc(unicos((P.partidos||{}).extrema_direita))+'; direita = '+esc(unicos((P.partidos||{}).direita))+'.</p><p class="frase">Os bairros vêm do endereço de cada local de votação no cadastro do TSE. Para achar o cartório de cada zona, veja o site do TRE-CE.</p>', fi((P.fontes||{}).zonas_ce, "TRE-CE · zonas eleitorais"))+
+  '</div>';
+  document.getElementById("plSel").onchange = function(){ location.hash = this.value ? "plano-"+encodeURIComponent(this.value) : "plano"; };
+}
+
+/* ---------- Buscas no Google: o que o povo procura sobre a extrema-direita ---------- */
+function buscasPag(){
+  topo(false);
+  const T = D.tr || {}, termos = (T.termos || ["Bolsonaro","extrema direita","anistia","maioridade penal","porte de arma"]).slice(0,5), geo = T.geo || "BR-CE", per = T.periodo || "today 3-m";
+  const rel = T.relacionadas || {};
+  app.innerHTML = '<div class="radar-topo"><span class="radar-ic" style="background:var(--verde)">'+I("lupa")+'</span><div><h1>Buscas no Google</h1><p class="sub">O que o povo do Ceará anda procurando no Google sobre a extrema-direita e as pautas do Radar. Ajuda a saber de que assunto falar e quando.</p></div></div>'+
+  '<div class="quadros">'+
+  quadro("lupa","c2","Interesse ao longo do tempo no Ceará", '<div id="gtTempo" class="gt-caixa"><p class="frase">Carregando o gráfico do Google Trends…</p></div>', '<a class="fi" href="'+esc("https://trends.google.com/trends/explore?geo="+geo+"&q="+encodeURIComponent(termos.join(",")))+'" target="_blank" rel="noopener" aria-label="Abrir no Google Trends">'+I("info")+'</a>', "q2")+
+  ((T.em_alta||[]).length ? quadro("alerta","c1","Em alta no Brasil, ligado ao tema", '<ul class="noticias">'+T.em_alta.slice(0,10).map(function(x){ return '<li class="noticia"><a class="n-tit" href="'+esc(x.google)+'" target="_blank" rel="noopener">'+esc(x.busca)+'</a><span class="n-meta"><b>'+esc(x.trafego||"")+' buscas</b>'+(x.data?' · '+dataBR(x.data):'')+'</span>'+(x.noticia?'<span class="n-liga"><a href="'+esc(x.link)+'" target="_blank" rel="noopener">'+I("jornal")+esc(x.noticia)+'</a></span>':'')+'</li>'; }).join("")+'</ul>', fi((T.fontes||{}).google)) : '')+
+  termos.map(function(t){ const x = rel[t]; return x && ((x.subindo||[]).length || (x.mais||[]).length) ? quadro("lupa","c4","Quem busca “"+esc(t)+"” também procura", '<div class="duas"><div><p><b>Subindo</b></p><ol class="num">'+(x.subindo||[]).slice(0,6).map(function(q){ return '<li>'+esc(q.busca)+' <small>'+esc(q.valor)+'</small></li>'; }).join("")+'</ol></div><div><p><b>Mais buscadas</b></p><ol class="num">'+(x.mais||[]).slice(0,6).map(function(q){ return '<li>'+esc(q.busca)+'</li>'; }).join("")+'</ol></div></div>', '') : ''; }).join("")+
+  quadro("info","c2","De onde vêm esses números", '<p class="frase">Do Google Trends. O gráfico é o oficial do Google e carrega no seu navegador. As listas são atualizadas pelo robô do EspiaCE todo dia, quando o Google deixa. Os números do Google Trends vão de 0 a 100: 100 é o dia de maior interesse no período, não a quantidade de buscas.</p><p class="frase">Os termos ficam no arquivo público <code>config/tendencias.json</code>.</p>', '')+
+  '</div>';
+  carregaTrends(termos, geo, per);
+}
+function carregaTrends(termos, geo, per){
+  const caixa = document.getElementById("gtTempo"); if (!caixa) return;
+  const desenha = function(){ try { caixa.innerHTML = ""; window.trends.embed.renderExploreWidgetTo(caixa, "TIMESERIES", {comparisonItem: termos.map(function(t){ return {keyword:t, geo:geo, time:per}; }), category:0, property:""}, {exploreQuery:"geo="+geo+"&q="+encodeURIComponent(termos.join(","))+"&date="+encodeURIComponent(per), guestPath:"https://trends.google.com:443/trends/embed/"}); } catch(e){ falha(); } };
+  const falha = function(){ caixa.style.minHeight = "0"; caixa.innerHTML = '<p class="frase">O gráfico do Google não carregou aqui. <a href="https://trends.google.com/trends/explore?geo='+geo+'&q='+encodeURIComponent(termos.join(","))+'" target="_blank" rel="noopener">Abra direto no Google Trends</a>.</p>'; };
+  if (window.trends && window.trends.embed) return desenha();
+  const sc = document.createElement("script"); sc.src = "https://ssl.gstatic.com/trends_nrtr/4031_RC01/embed_loader.js"; sc.async = true; sc.onload = desenha; sc.onerror = falha; document.head.appendChild(sc);
+  setTimeout(function(){ if (caixa.textContent.indexOf("Carregando")>=0) falha(); }, 9000);
+}
+
+/* ---------- Pedir correção ---------- */
+function corrigirPag(pid){
+  topo(false);
+  const p = pid ? D.porId[decodeURIComponent(pid)] : null, ct = D.meta.contato || {};
+  const nomes = D.pessoas.slice().sort(function(a,b){ return a.nome.localeCompare(b.nome); });
+  app.innerHTML = '<a class="voltar" href="'+(p?'#p-'+esc(p.id):'#inicio')+'">'+I("volta")+(p?esc(p.nome):'Início')+'</a><h1>Pedir correção</h1><p class="sub">Você é político, trabalha num gabinete ou achou um erro? Conte o que está errado e mande o documento que mostra o certo. Respondemos e, se for o caso, corrigimos e avisamos aqui no site.</p>'+
+  '<form class="cartao form-corr" id="fCorr" novalidate>'+
+    '<label class="rot" for="cPol">Sobre qual político?</label><select class="campo" id="cPol" required><option value="">Escolha</option>'+nomes.map(function(x){ return '<option value="'+esc(x.id)+'"'+(p&&p.id===x.id?' selected':'')+'>'+esc(x.nome)+' ('+CASAS[x.casa].nome+')</option>'; }).join("")+'<option value="outro">Outro / o site em geral</option></select>'+
+    '<label class="rot" for="cNome">Seu nome</label><input class="campo" id="cNome" required autocomplete="name">'+
+    '<label class="rot" for="cQuem">Você é</label><select class="campo" id="cQuem"><option>O próprio político</option><option>Da equipe do gabinete</option><option>Da assessoria de imprensa</option><option>Eleitor ou eleitora</option><option>Jornalista</option><option>Outro</option></select>'+
+    '<label class="rot" for="cMail">Seu e-mail (para a resposta)</label><input class="campo" id="cMail" type="email" required autocomplete="email">'+
+    '<label class="rot" for="cTel">Telefone (opcional)</label><input class="campo" id="cTel" type="tel" autocomplete="tel">'+
+    '<label class="rot" for="cOnde">Qual informação está errada?</label><select class="campo" id="cOnde"><option>Gastos</option><option>Votos</option><option>Projetos</option><option>Presença</option><option>Viagens</option><option>Emendas</option><option>Dados do TSE (bens, votos, campanha)</option><option>Radar do Retrocesso</option><option>Notícia</option><option>Foto ou redes sociais</option><option>Outra</option></select>'+
+    '<label class="rot" for="cTxt">O que está errado e qual é o certo?</label><textarea id="cTxt" required placeholder="Ex.: o gasto de março aparece como R$ 12 mil, mas o valor certo é R$ 8 mil, como mostra a nota em anexo."></textarea>'+
+    '<label class="rot" for="cDoc">Link do documento que comprova (opcional)</label><input class="campo" id="cDoc" type="url" placeholder="https://">'+
+    '<label class="chk"><input type="checkbox" id="cOk" required> Autorizo o EspiaCE a usar esses dados só para responder e analisar o pedido.</label>'+
+    '<div class="acoes"><button class="btn cheio" type="submit">'+I("email")+'Enviar pedido</button></div><p class="frase" id="cAviso" role="status"></p>'+
+  '</form>'+
+  '<p class="frase" style="margin-top:12px">Todo dado do EspiaCE vem de uma fonte oficial, mostrada no ⓘ ao lado. Se a fonte oficial estiver errada, também vale avisar o órgão responsável.</p>';
+  document.getElementById("fCorr").onsubmit = function(e){
+    e.preventDefault();
+    const v = function(id){ return (document.getElementById(id).value||"").trim(); }, aviso = document.getElementById("cAviso");
+    if (!v("cPol") || !v("cNome") || !/.+@.+\..+/.test(v("cMail")) || v("cTxt").length < 10 || !document.getElementById("cOk").checked){ aviso.textContent = "Preencha o político, seu nome, um e-mail válido, o que está errado e marque a autorização."; return; }
+    const pol = D.porId[v("cPol")], assunto = "Pedido de correção: "+(pol?pol.nome:"site")+" · "+v("cOnde");
+    const corpo = "Político: "+(pol?pol.nome+" ("+CASAS[pol.casa].nome+")":"outro")+"\nInformação: "+v("cOnde")+"\nQuem pede: "+v("cNome")+" · "+v("cQuem")+"\nE-mail: "+v("cMail")+(v("cTel")?"\nTelefone: "+v("cTel"):"")+"\n\nO que está errado e o certo:\n"+v("cTxt")+(v("cDoc")?"\n\nDocumento: "+v("cDoc"):"")+"\n\nPágina: "+location.href;
+    if (ct.endpoint){
+      fetch(ct.endpoint, {method:"POST", headers:{"Accept":"application/json","Content-Type":"application/json"}, body:JSON.stringify({assunto:assunto, nome:v("cNome"), email:v("cMail"), mensagem:corpo})})
+        .then(function(r){ if (!r.ok) throw new Error(r.status); aviso.textContent = "Pedido enviado. Vamos responder no e-mail "+v("cMail")+"."; e.target.reset(); })
+        .catch(function(){ aviso.textContent = "Não deu para enviar agora. Tente de novo ou mande para "+(ct.email||"o nosso e-mail")+"."; });
+    } else if (ct.email){
+      location.href = "mailto:"+encodeURIComponent(ct.email)+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
+      aviso.textContent = "Abrimos o seu programa de e-mail com o pedido pronto. É só enviar.";
+    } else if (D.meta.repositorio){
+      window.open("https://github.com/"+D.meta.repositorio+"/issues/new?labels=correcao&title="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo), "_blank");
+      aviso.textContent = "Abrimos o pedido no GitHub do projeto. Se preferir, copie o texto e mande por e-mail.";
+    } else { aviso.textContent = "O canal de contato ainda não foi configurado."; }
+  };
+}
 function rota(){
   const h = decodeURIComponent((location.hash || "#inicio").slice(1));
   let m;
@@ -1022,6 +1161,9 @@ function rota(){
   else if (h.indexOf("cidade")===0) cidadePag(h.slice(7));
   else if (h==="prioridades") prioridadesPag();
   else if (h.indexOf("noticias")===0) noticiasPag(h.slice(9));
+  else if (h.indexOf("plano")===0) planoPag(h.slice(6));
+  else if (h==="buscas") buscasPag();
+  else if (h.indexOf("corrigir")===0) corrigirPag(h.slice(9));
   else if (h==="politicos") politicosPag();
   else if (h.indexOf("radar")===0) radarPag(h.slice(6));
   else if (h==="seguindo") seguindo();

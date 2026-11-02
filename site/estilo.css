@@ -814,3 +814,22 @@ footer a{color:var(--sol)}
   .tb-ord{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tinta-2);margin:6px 0 2px}
   .tb-ord select{font:inherit;font-weight:700;color:var(--tinta);background:var(--suave);border:1px solid var(--linha);border-radius:999px;padding:5px 10px}
 }
+
+/* ===================== Plano de ação, buscas e correção ===================== */
+.passos{margin:4px 0 8px;padding-left:20px;display:grid;gap:8px}
+.passos li{line-height:1.45}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.duas ol{margin:4px 0 0;padding-left:20px}
+.duas li small{color:var(--tinta-2);margin-left:4px}
+@media (max-width:640px){ .duas{grid-template-columns:1fr} }
+.gt-caixa{min-height:340px}
+.gt-caixa iframe{width:100%!important;border:0}
+.form-corr{display:grid;gap:4px;max-width:640px;margin-top:12px;padding:18px}
+.form-corr .rot{margin-top:10px;font-weight:700;font-size:14px}
+.form-corr textarea{min-height:120px}
+.form-corr .chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin-top:12px;color:var(--tinta-2)}
+.form-corr .chk input{margin-top:3px}
+.corr{display:flex;gap:8px;align-items:center;margin:18px 0 0;color:var(--tinta-2)}
+.corr svg{width:18px;height:18px}
+input.campo{width:100%;padding:12px 14px;border:1.5px solid var(--linha);border-radius:12px;background:var(--cartao)}
+input.campo:focus,select.campo:focus,textarea:focus{outline:none;border-color:var(--verde)}

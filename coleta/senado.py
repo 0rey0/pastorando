@@ -3,7 +3,7 @@ import datetime
 import re
 
 from comum import (achar_coluna, classificar, fonte, foto_existente, get, homenagem, ler_csv, norm, numero_br,
-                   resumir_gastos, salvar_foto)
+                   resumir_gastos, salvar_foto, INICIO_MANDATO, gastos_ano_guardado, guardar_gastos_ano, juntar_anos)
 
 BASE = "https://legis.senado.leg.br/dadosabertos"
 MATERIA = "https://www25.senado.leg.br/web/atividade/materias/-/materia/%s"
@@ -163,6 +163,7 @@ def coletar(ano=None):
     sens = senadores()
     print("Senado: %d senadores do Ceará" % len(sens))
     ceaps = gastos_ceaps(ano)
+    antigos = {}
     pessoas, vots = [], {}
     for s in sens:
         cod, nome = s.get("CodigoParlamentar"), s.get("NomeParlamentar")
@@ -186,13 +187,23 @@ def coletar(ano=None):
         p["foto"] = fot or foto_existente(pid)
         if p["foto"]:
             p["fontes"]["foto"] = fonte("Senado · foto oficial", s.get("UrlFotoParlamentar") or pag)
-        chave = next((k for k in ceaps if norm(nome) in k or k in norm(s.get("NomeCompletoParlamentar") or nome)), None)
+        def _chave(base):
+            return next((k for k in base if norm(nome) in k or k in norm(s.get("NomeCompletoParlamentar") or nome)), None)
+        for a in range(INICIO_MANDATO["senado"], ano):
+            if not gastos_ano_guardado(pid, a):
+                if a not in antigos:
+                    antigos[a] = gastos_ceaps(a)
+                k = _chave(antigos[a])
+                if k:
+                    guardar_gastos_ano(pid, a, resumir_gastos(antigos[a][k]))
+        chave = _chave(ceaps)
         if chave:
             p["gastos"] = resumir_gastos(ceaps[chave])
             via = viagens_ceaps(ceaps[chave])
             if via:
                 p["viagens"] = {"n": len(via), "total": round(sum(v["valor"] for v in via), 2), "ultimas": via[:20]}
                 p["fontes"]["viagens"] = fonte("Senado · CEAPS %d (detalhamento das passagens)" % ano, CEAPS[0] % ano)
+        juntar_anos(p, ano)
         try:
             p["projetos"] = projetos(cod, ano)
         except Exception as e:  # noqa: BLE001
