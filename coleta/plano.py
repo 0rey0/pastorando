@@ -16,7 +16,7 @@ ANO = 2026
 SECAO = CDN + "/votacao_secao/votacao_secao_{a}_CE.zip"
 LOCAIS = CDN + "/eleitorado_locais_votacao/eleitorado_local_votacao_{a}.zip"
 DIAS = 20
-VERSAO = 4
+VERSAO = 5
 
 
 def _espectro(cfg):
@@ -130,7 +130,7 @@ def _bairros(por_sigla, partido_num, cfg):
             turno_max = max(turno_max, turno)
         mun = _v(d, "NM_MUNICIPIO").title()
         zona = str(int(numero_br(_v(d, "NR_ZONA") or 0)))
-        loc = _v(d, "NR_LOCAL_VOTACAO")
+        loc = _num_txt(_v(d, "NR_LOCAL_VOTACAO"))
         nr = _v(d, "NR_VOTAVEL")
         q = int(numero_br(_v(d, "QT_VOTOS") or 0))
         if not nr or nr[:2] in ("95", "96", "97"):  # branco, nulo, anulado
@@ -146,10 +146,23 @@ def _bairros(por_sigla, partido_num, cfg):
     bairro, coord = {}, {}
     try:
         cl = baixar(LOCAIS.format(a=ANO), "tse_locais_%d.zip" % ANO, dias=DIAS)
-        for d in tabela(cl, r"eleitorado_local_votacao_%d\.(csv|txt)$" % ANO, filtro=lambda t: '"CE"' in t or ";CE;" in t or t.startswith("CE;")):
+        dl = DIAG.setdefault("plano_locais_info", {"linhas_ce": 0, "casados": 0})
+        try:
+            import zipfile
+            with zipfile.ZipFile(cl) as z:
+                dl["arquivos"] = z.namelist()[:8]
+        except Exception as e:  # noqa: BLE001
+            dl["arquivos"] = ["erro: %s" % e]
+        chaves = set(locais)
+        for d in tabela(cl, r"eleitorado_local_votacao.*\.(csv|txt)$", filtro=lambda t: '"CE"' in t or ";CE;" in t or t.startswith("CE;")):
             if _v(d, "SG_UF") != "CE":
                 continue
-            k = (_v(d, "NM_MUNICIPIO").title(), str(int(numero_br(_v(d, "NR_ZONA") or 0))), _v(d, "NR_LOCAL_VOTACAO"))
+            dl["linhas_ce"] += 1
+            if dl["linhas_ce"] == 1:
+                dl["exemplo"] = {k: d.get(k) for k in list(d)[:40]}
+            k = (_v(d, "NM_MUNICIPIO").title(), str(int(numero_br(_v(d, "NR_ZONA") or 0))), _num_txt(_v(d, "NR_LOCAL_VOTACAO")))
+            if k in chaves:
+                dl["casados"] += 1
             bairro[k] = _v(d, "NM_BAIRRO").title()
             try:
                 lat, lon = float(_v(d, "NR_LATITUDE").replace(",", ".")), float(_v(d, "NR_LONGITUDE").replace(",", "."))
@@ -208,6 +221,13 @@ def _dentro(x, y, anel):
             dentro = not dentro
         j = i
     return dentro
+
+
+def _num_txt(v):
+    try:
+        return str(int(numero_br(v)))
+    except (TypeError, ValueError):
+        return v or ""
 
 
 def _agrupa_bairros(locais):
