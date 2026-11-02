@@ -16,7 +16,7 @@ ANO = 2026
 SECAO = CDN + "/votacao_secao/votacao_secao_{a}_CE.zip"
 LOCAIS = CDN + "/eleitorado_locais_votacao/eleitorado_local_votacao_{a}.zip"
 DIAS = 20
-VERSAO = 3
+VERSAO = 4
 
 
 def _espectro(cfg):
@@ -41,7 +41,10 @@ def _zonas(cfg, por_sigla, caminho=None):
     if not c:
         return None, {}
     zonas, partido_num, cand_ed = {}, {}, {}
-    for d in tabela(c, r"votacao_candidato_munzona_%d_CE\.(csv|txt)$" % ANO):
+    # o voto para presidente fica no arquivo do Brasil (_BR), não no do Ceará
+    for d in tabela(c, r"votacao_candidato_munzona_%d_(CE|BR)\.(csv|txt)$" % ANO, filtro=lambda t: "CE" in t):
+        if _v(d, "SG_UF") and _v(d, "SG_UF") != "CE":
+            continue
         cargo = norm(_v(d, "DS_CARGO"))
         if cargo not in ("presidente", "governador", "senador", "deputado federal", "deputado estadual"):
             continue
@@ -95,7 +98,9 @@ def _indicadores(z):
 
 
 def _bairros(por_sigla, partido_num, cfg):
-    """Por local de votação (e bairro): % da extrema-direita no 2º turno presidencial (ou no 1º, se não houve 2º)."""
+    """Por local de votação (e bairro): % da extrema-direita. O arquivo do Ceará por seção não traz presidente
+    (ele fica no arquivo do Brasil inteiro, grande demais), então a medida é o voto em deputados federais e estaduais
+    de partidos de extrema-direita, somando a votação nominal e a de legenda."""
     try:
         c = baixar(SECAO.format(a=ANO), "tse_secao_%d_CE.zip" % ANO, dias=DIAS)
     except Exception as e:  # noqa: BLE001
@@ -116,24 +121,24 @@ def _bairros(por_sigla, partido_num, cfg):
         cg = norm(_v(d, "DS_CARGO"))
         if len(dg["cargos"]) < 12:
             dg["cargos"][cg] = dg["cargos"].get(cg, 0) + 1
-        if cg != "presidente":
+        if cg not in ("presidente", "deputado federal", "deputado estadual"):
             continue
-        dg["presidente"] += 1
-        if dg["presidente"] == 1:
-            dg["exemplo"] = {k: d.get(k) for k in list(d)[:30]}
+        if cg == "presidente":
+            dg["presidente"] += 1
         turno = int(numero_br(_v(d, "NR_TURNO") or 1))
-        turno_max = max(turno_max, turno)
+        if cg == "presidente":
+            turno_max = max(turno_max, turno)
         mun = _v(d, "NM_MUNICIPIO").title()
         zona = str(int(numero_br(_v(d, "NR_ZONA") or 0)))
         loc = _v(d, "NR_LOCAL_VOTACAO")
         nr = _v(d, "NR_VOTAVEL")
         q = int(numero_br(_v(d, "QT_VOTOS") or 0))
-        if not nr or len(nr) > 2 or nr in ("95", "96"):  # 95 branco, 96 nulo
+        if not nr or nr[:2] in ("95", "96", "97"):  # branco, nulo, anulado
             continue
-        g = _grupo(partido_num.get(nr, ""), por_sigla)
+        g = _grupo(partido_num.get(nr[:2], ""), por_sigla)  # os dois primeiros números são o partido
         k = (mun, zona, loc)
         x = locais.setdefault(k, {"nome": _v(d, "NM_LOCAL_VOTACAO").title(), "endereco": _v(d, "DS_LOCAL_VOTACAO_ENDERECO").title(), "t": {}})
-        tt = x["t"].setdefault(turno, {"total": 0})
+        tt = x["t"].setdefault(("p%d" % turno) if cg == "presidente" else "dep", {"total": 0})
         tt["total"] += q
         tt[g] = tt.get(g, 0) + q
     if not locais:
@@ -156,8 +161,10 @@ def _bairros(por_sigla, partido_num, cfg):
         DIAG["plano_locais"] = str(e)[:200]
         print("  TSE: bairros dos locais de votação indisponíveis:", e)
     out = []
+    medida = "p%d" % turno_max if any(("p%d" % turno_max) in x["t"] for x in locais.values()) else "dep"
+    DIAG["plano_medida_locais"] = medida
     for (mun, zona, loc), x in locais.items():
-        t = x["t"].get(turno_max) or {}
+        t = x["t"].get(medida) or {}
         if not t.get("total"):
             continue
         c = coord.get((mun, zona, loc))
@@ -166,7 +173,7 @@ def _bairros(por_sigla, partido_num, cfg):
             b = _bairro_fortaleza(c[0], c[1]) or b
         out.append({"municipio": mun, "zona": zona, "local": x["nome"], "endereco": x["endereco"], "bairro": b,
                     "lat": c[0] if c else None, "lon": c[1] if c else None,
-                    "votos": t["total"], "extrema": _pct(t.get("extrema_direita", 0), t["total"]), "turno": turno_max})
+                    "votos": t["total"], "extrema": _pct(t.get("extrema_direita", 0), t["total"]), "medida": medida})
     DIAG["plano_locais_com_coordenada"] = sum(1 for l in out if l["lat"])
     return out
 
@@ -255,9 +262,11 @@ def coletar(forcar=False):
         m["zonas"] += 1
     municipios = {n: {"forca": _pct(m["ext"], m["votos"]), "votos": m["votos"], "zonas": m["zonas"]} for n, m in mun.items()}
     locais = _bairros(por_sigla, partido_num, cfg)
+    medida_locais = (locais[0]["medida"] if locais else None)
     bairros = _agrupa_bairros(locais)
     tem_2t = any(z.get("pres2_extrema") is not None for z in lista)
     pacote = {"versao": VERSAO, "quando": agora(), "epoch": int(time.time()), "ano": ANO, "medida": "pres2_extrema" if tem_2t else "media_1t",
+              "medida_locais": {"p2": "pres2", "p1": "pres1", "dep": "deputados"}.get(medida_locais),
               "explica": cfg.get("_leia", ""), "partidos": cfg["partidos"], "zonas": lista, "municipios": municipios,
               "bairros": sorted([b for b in bairros if b["votos"] >= 300], key=lambda b: -(b["extrema"] or 0))[:400],
               "locais": sorted([l for l in locais if l["votos"] >= 150], key=lambda l: -(l["extrema"] or 0))[:300],
