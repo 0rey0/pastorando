@@ -2,6 +2,39 @@
   "_leia": "Termos que o site acompanha no Google Trends. 'termos' aparecem nos gráficos (no máximo 5 por gráfico) e nas pesquisas relacionadas; 'geo' BR-CE é o Ceará e BR é o Brasil; 'periodo' segue o formato do Google Trends ('today 1-m' = último mês, 'today 3-m' = 3 meses, 'today 12-m' = 12 meses). 'filtro_em_alta' escolhe, entre as buscas em alta no Brasil, as que têm relação com a extrema-direita.",
   "geo": "BR-CE",
   "periodo": "today 3-m",
-  "termos": ["Bolsonaro", "extrema direita", "anistia", "maioridade penal", "porte de arma"],
-  "filtro_em_alta": ["bolsonaro", "bolsonarismo", "extrema direita", "extrema-direita", "nikolas", "malafaia", "anistia", "8 de janeiro", "golpe", "flavio", "eduardo bolsonaro", "michelle", "tarcisio", "zema", "caiado", "marcal", "girao", "andre fernandes", "pl ", "maioridade penal", "porte de arma", "aborto", "escola sem partido", "ideologia de genero"]
+  "termos": [
+    "Bolsonaro",
+    "extrema direita",
+    "anistia",
+    "maioridade penal",
+    "porte de arma"
+  ],
+  "filtro_em_alta": [
+    "bolsonaro",
+    "bolsonarismo",
+    "bolsonarista",
+    "extrema direita",
+    "extrema-direita",
+    "nikolas",
+    "malafaia",
+    "damares",
+    "zambelli",
+    "anistia",
+    "8 de janeiro",
+    "golpe de estado",
+    "golpista",
+    "eduardo bolsonaro",
+    "michelle bolsonaro",
+    "flavio bolsonaro",
+    "tarcisio",
+    "marcal",
+    "girao",
+    "andre fernandes",
+    "carmelo neto",
+    "maioridade penal",
+    "porte de arma",
+    "escola sem partido",
+    "ideologia de genero",
+    "aborto"
+  ]
 }

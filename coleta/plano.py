@@ -10,12 +10,13 @@ import re
 import time
 
 from comum import DIAG, agora, baixar, config, fonte, ler, norm, numero_br, salvar
-from tse import CDN, PAGINA, _v, arquivo, tabela
+from tse import CDN, PAGINA, _v, arquivo, tabela  # noqa: F401
 
 ANO = 2026
 SECAO = CDN + "/votacao_secao/votacao_secao_{a}_CE.zip"
 LOCAIS = CDN + "/eleitorado_locais_votacao/eleitorado_local_votacao_{a}.zip"
 DIAS = 20
+VERSAO = 2
 
 
 def _espectro(cfg):
@@ -34,9 +35,9 @@ def _pct(a, b):
     return round(100.0 * a / b, 1) if b else None
 
 
-def _zonas(cfg, por_sigla):
+def _zonas(cfg, por_sigla, caminho=None):
     """Soma, por zona eleitoral, os votos de cada campo político em cada cargo."""
-    c = arquivo("votos", ANO)
+    c = caminho or arquivo("votos", ANO)
     if not c:
         return None, {}
     zonas, partido_num, cand_ed = {}, {}, {}
@@ -103,9 +104,23 @@ def _bairros(por_sigla, partido_num, cfg):
         return []
     locais = {}
     turno_max = 1
-    for d in tabela(c, r"votacao_secao_%d_CE\.(csv|txt)$" % ANO, filtro=lambda t: "PRESIDENTE" in t.upper() or "Presidente" in t):
-        if norm(_v(d, "DS_CARGO")) != "presidente":
+    dg = DIAG.setdefault("plano_secao_info", {"arquivos": [], "linhas": 0, "presidente": 0, "cargos": {}})
+    try:
+        import zipfile
+        with zipfile.ZipFile(c) as z:
+            dg["arquivos"] = z.namelist()[:6]
+    except Exception as e:  # noqa: BLE001
+        dg["arquivos"] = ["erro: %s" % e]
+    for d in tabela(c, r"votacao_secao_%d_CE\.(csv|txt)$" % ANO):
+        dg["linhas"] += 1
+        cg = norm(_v(d, "DS_CARGO"))
+        if len(dg["cargos"]) < 12:
+            dg["cargos"][cg] = dg["cargos"].get(cg, 0) + 1
+        if cg != "presidente":
             continue
+        dg["presidente"] += 1
+        if dg["presidente"] == 1:
+            dg["exemplo"] = {k: d.get(k) for k in list(d)[:30]}
         turno = int(numero_br(_v(d, "NR_TURNO") or 1))
         turno_max = max(turno_max, turno)
         mun = _v(d, "NM_MUNICIPIO").title()
@@ -163,12 +178,23 @@ def _agrupa_bairros(locais):
 
 def coletar(forcar=False):
     velho = ler("plano.json", {}) or {}
-    if not forcar and velho.get("zonas") and velho.get("epoch", 0) > time.time() - DIAS * 86400:
+    if not forcar and velho.get("zonas") and velho.get("versao") == VERSAO and velho.get("medida") == "pres2_extrema" and velho.get("bairros") \
+            and velho.get("epoch", 0) > time.time() - DIAS * 86400:
         print("Plano de ação: usando o cálculo guardado de", velho.get("quando"))
         return velho
     cfg = config("espectro.json")
     por_sigla = _espectro(cfg)
     zonas, partido_num = _zonas(cfg, por_sigla)
+    if zonas and not any("presidente_2" in z["cargos"] for z in zonas.values()):
+        # o arquivo guardado pode ser de antes da apuração do 2º turno: baixa de novo
+        try:
+            novo = baixar(CDN + "/votacao_candidato_munzona/votacao_candidato_munzona_%d.zip" % ANO, "tse_votos_%d.zip" % ANO, dias=1)
+            z2, p2 = _zonas(cfg, por_sigla, novo)
+            if z2:
+                zonas, partido_num = z2, p2
+        except Exception as e:  # noqa: BLE001
+            DIAG["plano_2turno"] = str(e)[:160]
+        DIAG["plano_tem_2turno"] = any("presidente_2" in z["cargos"] for z in zonas.values())
     if not zonas:
         print("Plano de ação: votos de %d por zona ainda não estão no TSE" % ANO)
         return velho or None
@@ -187,7 +213,7 @@ def coletar(forcar=False):
     locais = _bairros(por_sigla, partido_num, cfg)
     bairros = _agrupa_bairros(locais)
     tem_2t = any(z.get("pres2_extrema") is not None for z in lista)
-    pacote = {"quando": agora(), "epoch": int(time.time()), "ano": ANO, "medida": "pres2_extrema" if tem_2t else "media_1t",
+    pacote = {"versao": VERSAO, "quando": agora(), "epoch": int(time.time()), "ano": ANO, "medida": "pres2_extrema" if tem_2t else "media_1t",
               "explica": cfg.get("_leia", ""), "partidos": cfg["partidos"], "zonas": lista, "municipios": municipios,
               "bairros": sorted([b for b in bairros if b["votos"] >= 300], key=lambda b: -(b["extrema"] or 0))[:400],
               "locais": sorted([l for l in locais if l["votos"] >= 150], key=lambda l: -(l["extrema"] or 0))[:300],

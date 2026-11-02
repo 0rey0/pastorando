@@ -37,7 +37,7 @@ def em_alta(cfg):
             trafego = it.findtext("ht:approx_traffic", default="", namespaces=NS)
             noticias = [(n.findtext("ht:news_item_title", default="", namespaces=NS), n.findtext("ht:news_item_url", default="", namespaces=NS))
                         for n in it.findall("ht:news_item", NS)]
-            texto = norm(tit + " " + " ".join(a for a, _ in noticias))
+            texto = " " + norm(tit) + " "  # só a busca em si: as manchetes ligadas trazem muito ruído
             if not any(t in texto for t in termos):
                 continue
             try:
