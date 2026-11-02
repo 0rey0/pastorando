@@ -108,12 +108,14 @@ O perfil de cada político mostra os gastos de cada ano do mandato e o total do 
 
 A página **Gastos** compara todos por ano ou pelo mandato inteiro. Os anos que já terminaram ficam guardados em `site/dados/gastos_anos.json` e só são baixados de novo a cada 90 dias.
 
-## Plano de ação
+## Contra-atacar
 
-A página **Plano de ação** usa os resultados de 2026 do TSE para mostrar onde a extrema-direita teve mais votos no Ceará:
+A página **Contra-atacar** usa os resultados de 2026 do TSE para mostrar onde a extrema-direita teve mais votos no Ceará:
 - por zona eleitoral;
 - por bairro;
 - por local de votação.
+
+Tudo aparece num mapa de verdade, com as ruas: os locais de votação são pontos coloridos pela força da extrema-direita, e as zonas eleitorais aparecem como áreas. Em Fortaleza, os 121 bairros oficiais da Prefeitura também são pintados (arquivo `site/bairros-fortaleza.json`). As áreas das zonas são aproximadas: o TSE não publica o desenho das zonas, então o mapa liga os locais de votação de cada uma.
 
 Ela traz duas listas: as zonas onde a extrema-direita venceu e as zonas na disputa (de 42% a 50%), onde dá para virar votos. Em cada zona aparecem também os deputados de direita mais votados ali e dicas de como a militância pode agir.
 

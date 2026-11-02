@@ -225,7 +225,7 @@ function avisoNavegador(){
 
 /* ---------- topo, menu e busca ---------- */
 const MENU = [["inicio","casa","Início"],["radar","radar","Radar"],["alece","alece","Assembleia"],["camara","camara","Câmara"],["senado","senado","Senado"],["governo","gov","Governo"],
-  ["plano","bandeira","Plano de ação"],["noticias","jornal","No noticiário"],["buscas","lupa","Buscas no Google"],["cidade","mapa","Sua cidade"],["prioridades","alvo","Áreas prioritárias"],["gastos-todos","moeda","Gastos"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],
+  ["contra-atacar","bandeira","Contra-atacar"],["noticias","jornal","No noticiário"],["buscas","lupa","Buscas no Google"],["cidade","mapa","Sua cidade"],["prioridades","alvo","Áreas prioritárias"],["gastos-todos","moeda","Gastos"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],
   ["comparar","comparar","Comparar"],["eleitos","urnaN","Eleitos 2026"],["seguindo","sino","Seguindo"],["dados","dados","Dados abertos"],["corrigir","doc","Pedir correção"],["sobre","info","Sobre"]];
 const ABAS = [["inicio","casa","Início"],["politicos","vazio","Políticos"],["radar","radar","Radar"],["cidade","mapa","Cidades"],["mais","grade","Mais"]];
 function montaMenu(){
@@ -251,7 +251,7 @@ function montaBusca(el, grande){
   sQ.onkeydown = function(e){ if (e.key==="Enter"){ const a = sSug.querySelector("a"); if (a){ location.hash = a.getAttribute("href"); sQ.blur(); } } };
   sQ.onblur = function(){ setTimeout(function(){ sSug.classList.remove("on"); },200); };
 }
-const ATALHOS = [["radar","radar","Radar"],["plano","bandeira","Plano de ação"],["noticias","jornal","No noticiário"],["buscas","lupa","Buscas no Google"],["cobrar","megafone","Cobrar"],["prioridades","alvo","Áreas prioritárias"],["gastos","moeda","Gastos"],["votos","urna","Votos"],["projetos","doc","Projetos"],["cidade","mapa","Sua cidade"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],["comparar","comparar","Comparar"],["eleitos","urnaN","Eleitos 2026"]];
+const ATALHOS = [["radar","radar","Radar"],["contra-atacar","bandeira","Contra-atacar"],["noticias","jornal","No noticiário"],["buscas","lupa","Buscas no Google"],["cobrar","megafone","Cobrar"],["prioridades","alvo","Áreas prioritárias"],["gastos","moeda","Gastos"],["votos","urna","Votos"],["projetos","doc","Projetos"],["cidade","mapa","Sua cidade"],["viagens-todas","aviao","Viagens"],["promessas","promessa","Promessas"],["comparar","comparar","Comparar"],["eleitos","urnaN","Eleitos 2026"]];
 function topo(inicio){
   document.body.classList.toggle("na-inicio", !!inicio);
   document.getElementById("buscaTopo").innerHTML = "";
@@ -1040,12 +1040,73 @@ function indice(h){
     window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - nav.offsetHeight - 12, behavior:"smooth"}); });
   if ("IntersectionObserver" in window){ const ob = new IntersectionObserver(function(es){ es.forEach(function(en){ if (en.isIntersecting){ nav.querySelectorAll("a").forEach(function(a){ const on = a.getAttribute("data-sec")===en.target.id; a.classList.toggle("on", on); if (on && a.scrollIntoView && nav.scrollWidth > nav.clientWidth) nav.scrollTo({left:a.offsetLeft-16, behavior:"smooth"}); }); } }); }, {rootMargin:"-30% 0px -60% 0px"}); qs.forEach(function(q){ ob.observe(q); }); }
 }
-/* ---------- Plano de ação: onde a extrema-direita foi mais votada em 2026 ---------- */
+/* ---------- Contra-atacar: onde a extrema-direita foi mais votada em 2026 ---------- */
+/* mapa das zonas com Leaflet (vem junto com o site, em vendor/leaflet) */
+const COR_ED = ["#f6e3dc","#efbfae","#e38f74","#c95b3f","#8e3221"];
+function corEd(v){ if (v==null) return "#cfcfc4"; return COR_ED[v<30?0:v<40?1:v<50?2:v<60?3:4]; }
+function carregaLeaflet(pronto){
+  if (window.L && window.L.map) return pronto();
+  if (!document.getElementById("lfCss")){ const l = document.createElement("link"); l.id = "lfCss"; l.rel = "stylesheet"; l.href = "vendor/leaflet/leaflet.css"; document.head.appendChild(l); }
+  const sc = document.createElement("script"); sc.src = "vendor/leaflet/leaflet.js"; sc.onload = pronto; sc.onerror = function(){ const c = document.getElementById("mapaZonas"); if (c) c.innerHTML = '<p class="frase">Não deu para carregar o mapa agora.</p>'; }; document.head.appendChild(sc);
+}
+function envoltoria(pts){ // contorno convexo (monotone chain) de [lat, lon]
+  const p = pts.map(function(x){ return [x[1], x[0]]; }).sort(function(a,b){ return a[0]-b[0] || a[1]-b[1]; });
+  if (p.length < 3) return null;
+  const cruz = function(o,a,b){ return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]); };
+  const lo = [], hi = [];
+  p.forEach(function(q){ while (lo.length>=2 && cruz(lo[lo.length-2], lo[lo.length-1], q) <= 0) lo.pop(); lo.push(q); });
+  p.slice().reverse().forEach(function(q){ while (hi.length>=2 && cruz(hi[hi.length-2], hi[hi.length-1], q) <= 0) hi.pop(); hi.push(q); });
+  return lo.slice(0,-1).concat(hi.slice(0,-1)).map(function(q){ return [q[1], q[0]]; });
+}
+let BAIRROS_FOR = null;
+function mapaZonas(P, lugar){
+  const caixa = document.getElementById("mapaZonas"); if (!caixa) return;
+  const pts = (P.pontos||[]).filter(function(x){ return x[4]!=null && (!lugar || x[0]===lugar); });
+  if (!pts.length){ caixa.classList.add("vazio-mapa"); caixa.innerHTML = '<p class="frase">'+((P.pontos||[]).length ? 'Não há locais de votação com endereço no mapa para essa cidade.' : 'O mapa aparece quando o robô juntar os endereços dos locais de votação do TSE.')+'</p>'; return; }
+  carregaLeaflet(function(){
+    if (!document.body.contains(caixa)) return;
+    caixa.innerHTML = "";
+    const L = window.L, mapa = L.map(caixa, {scrollWheelZoom:false, preferCanvas:true, attributionControl:true, zoomSnap:.25});
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {maxZoom:18, subdomains:"abcd", attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(mapa);
+    const camadas = {};
+    // zonas: contorno dos locais de cada zona
+    if (lugar){
+      const porZona = {}; pts.forEach(function(x){ (porZona[x[1]] = porZona[x[1]] || []).push(x); });
+      const zz = L.layerGroup();
+      Object.keys(porZona).forEach(function(z){ const L0 = porZona[z], tot = L0.reduce(function(a,x){ return a+x[6]; },0), ed = tot ? L0.reduce(function(a,x){ return a+x[6]*(x[7]||0); },0)/tot : null;
+        const casco = envoltoria(L0.map(function(x){ return [x[4], x[5]]; }));
+        const dica = '<b>Zona '+esc(z)+'</b><br>'+pct(ed)+' para a extrema-direita<br>'+L0.length+' locais · '+NUM.format(tot)+' votos';
+        if (casco) L.polygon(casco, {color:corEd(ed), weight:2, dashArray:"5 4", fillColor:corEd(ed), fillOpacity:.18}).bindTooltip(dica, {sticky:true}).addTo(zz);
+        else L.circle([L0[0][4], L0[0][5]], {radius:600, color:corEd(ed), weight:2, dashArray:"5 4", fillOpacity:.15}).bindTooltip(dica).addTo(zz);
+        const c = L0.reduce(function(a,x){ return [a[0]+x[4]/L0.length, a[1]+x[5]/L0.length]; }, [0,0]);
+        L.marker(c, {icon:L.divIcon({className:"rot-zona", html:"Zona "+esc(z), iconSize:null}), interactive:false}).addTo(zz); });
+      camadas["Zonas eleitorais"] = zz.addTo(mapa);
+    }
+    // bairros de Fortaleza (limites oficiais)
+    const pintaBairros = function(){ if (!BAIRROS_FOR || (lugar && lugar!=="Fortaleza")) return;
+      const forca = {}; (P.bairros||[]).forEach(function(b){ if (b.municipio==="Fortaleza") forca[semAc(b.bairro)] = b; });
+      const bb = L.geoJSON(BAIRROS_FOR, {style:function(f){ const b = forca[semAc(f.properties.nome)]; return {color:"#5b6a5c", weight:1, fillColor:corEd(b?b.extrema:null), fillOpacity:b?.45:.08}; },
+        onEachFeature:function(f, l){ const b = forca[semAc(f.properties.nome)]; l.bindTooltip('<b>'+esc(f.properties.nome)+'</b><br>'+(b?pct(b.extrema)+' para a extrema-direita · '+NUM.format(b.votos)+' votos':'sem local de votação no bairro'), {sticky:true}); }});
+      camadas["Bairros de Fortaleza"] = bb.addTo(mapa); bb.bringToBack(); ctrl.addOverlay(bb, "Bairros de Fortaleza"); };
+    // locais de votação
+    const ll = L.layerGroup();
+    pts.forEach(function(x){ L.circleMarker([x[4], x[5]], {radius:Math.max(3, Math.min(8, Math.sqrt(x[6])/7)), color:"#fff", weight:1, fillColor:corEd(x[7]), fillOpacity:.9})
+      .bindPopup('<b>'+esc(x[2])+'</b><br>'+(x[3]?esc(x[3])+' · ':'')+esc(x[0])+', zona '+esc(x[1])+'<br><b>'+pct(x[7])+'</b> para a extrema-direita · '+NUM.format(x[6])+' votos').addTo(ll); });
+    camadas["Locais de votação"] = ll.addTo(mapa);
+    const ctrl = L.control.layers(null, camadas, {collapsed:window.innerWidth<700, position:"topright"}).addTo(mapa);
+    const leg = L.control({position:"bottomleft"}); leg.onAdd = function(){ const d = L.DomUtil.create("div","leg-mapa"); d.innerHTML = '<b>Extrema-direita</b>'+[["até 30%",0],["30–40%",1],["40–50%",2],["50–60%",3],["60% ou mais",4]].map(function(f){ return '<span><i style="background:'+COR_ED[f[1]]+'"></i>'+f[0]+'</span>'; }).join(""); return d; }; leg.addTo(mapa);
+    mapa.fitBounds(L.latLngBounds(pts.map(function(x){ return [x[4], x[5]]; })).pad(.05));
+    if (!lugar || lugar==="Fortaleza"){
+      if (BAIRROS_FOR) pintaBairros();
+      else { const E = window.__DADOS__; (E && E["bairros-fortaleza.json"] ? Promise.resolve(E["bairros-fortaleza.json"]) : fetch("bairros-fortaleza.json").then(function(r){ return r.json(); })).then(function(g){ BAIRROS_FOR = g; pintaBairros(); }).catch(function(){}); }
+    }
+  });
+}
 function unicos(l){ const v = {}; return (l||[]).filter(function(x){ const k = semAc(x).replace(/\s/g,""); if (v[k]) return false; v[k] = 1; return true; }).join(", "); }
 function planoPag(sub){
   topo(false);
   const P = D.plano;
-  const cab = '<div class="radar-topo"><span class="radar-ic" style="background:var(--verde)">'+I("bandeira")+'</span><div><h1>Plano de ação</h1><p class="sub">Onde a extrema-direita teve mais votos no Ceará em 2026, zona por zona e bairro por bairro. É para lá que a militância precisa ir: conversar, ouvir e mostrar o que esses políticos fazem com o voto do povo.</p></div></div>';
+  const cab = '<div class="radar-topo"><span class="radar-ic" style="background:var(--verde)">'+I("bandeira")+'</span><div><h1>Contra-atacar</h1><p class="sub">Onde a extrema-direita teve mais votos no Ceará em 2026, zona por zona e bairro por bairro. É para lá que a militância precisa ir: conversar, ouvir e mostrar o que esses políticos fazem com o voto do povo.</p></div></div>';
   if (!P || !(P.zonas||[]).length){ app.innerHTML = cab+'<div class="vazio">O robô ainda está juntando os resultados de 2026 do TSE por zona eleitoral. Volte depois da próxima atualização.</div>'; return; }
   const Z = P.zonas, M = P.municipios || {}, medida = P.medida === "pres2_extrema" ? "no 2º turno para presidente" : "na média do 1º turno";
   const fortes = Z.filter(function(z){ return z.forca >= 50; }), apertadas = Z.filter(function(z){ return z.forca >= 42 && z.forca < 50; });
@@ -1061,7 +1122,9 @@ function planoPag(sub){
         Z[0] ? {ic:"mapa", r:"Zona mais forte da extrema-direita", v:esc(Z[0].municipio), s:"zona "+Z[0].zona+" · "+pct(Z[0].forca)} : null,
         B[0] ? {ic:"casa", r:"Bairro mais forte", v:esc(B[0].bairro), s:esc(B[0].municipio)+" · "+pct(B[0].extrema)} : null])+
   '<div class="quadros">'+
-  quadro("mapa","c2","Cidades pela força da extrema-direita", mapaCE(Object.keys(M).reduce(function(o,n){ if (M[n].forca!=null) o[n] = M[n].forca; return o; }, {}), {fmt:function(v){ return pct(v)+" para a extrema-direita"; }, legenda:"Mais escuro: mais votos na extrema-direita "+medida, colValor:"Extrema-direita", fmtLeg:function(v){ return Math.round(v)+"%"; }, prefixo:"plano-", sel:lugar}), fi((P.fontes||{}).zonas), "q2")+
+  quadro("mapa","c2",(lugar?esc(lugar)+": zonas eleitorais, bairros e locais de votação":"Zonas eleitorais e locais de votação"), '<div id="mapaZonas" class="mapa-zonas" role="region" aria-label="Mapa das zonas eleitorais"><p class="frase">Carregando o mapa…</p></div>'+
+    '<p class="fonte">'+(lugar?'':'Escolha uma cidade acima para ver as zonas. ')+'Cada ponto é um local de votação: quanto mais escuro, mais votos na extrema-direita. As áreas das zonas são aproximadas (o TSE não publica o desenho das zonas); em Fortaleza, os bairros seguem os limites oficiais da Prefeitura.</p>', fi((P.fontes||{}).locais), "qt")+
+  quadro("mapa","c2","Cidades pela força da extrema-direita", mapaCE(Object.keys(M).reduce(function(o,n){ if (M[n].forca!=null) o[n] = M[n].forca; return o; }, {}), {fmt:function(v){ return pct(v)+" para a extrema-direita"; }, legenda:"Mais escuro: mais votos na extrema-direita "+medida, colValor:"Extrema-direita", fmtLeg:function(v){ return Math.round(v)+"%"; }, prefixo:"contra-atacar-", sel:lugar}), fi((P.fontes||{}).zonas), "q2")+
   quadro("alvo","c4","O que fazer", '<ol class="passos">'+
     '<li><b>Escolha uma zona ou bairro da lista</b> e junte um grupo pequeno de quem mora ou trabalha lá.</li>'+
     '<li><b>Leve informação, não briga.</b> Mostre no celular o que os deputados mais votados ali fazem com o dinheiro e com o voto (perfil de cada um aqui no EspiaCE).</li>'+
@@ -1084,7 +1147,8 @@ function planoPag(sub){
       {t:"Votos", k:"votos", num:true, fmt:function(v){ return NUM.format(v); }}], Lc, {ord:1, limite:10}), fi((P.fontes||{}).secao)) : '')+
   quadro("info","c2","Como medimos", '<p class="frase">Para cada zona eleitoral, somamos os votos do TSE de 2026 e vemos que parte foi para candidatos de partidos de extrema-direita '+medida+'. Os partidos de cada campo ficam no arquivo público <code>config/espectro.json</code>: extrema-direita = '+esc(unicos((P.partidos||{}).extrema_direita))+'; direita = '+esc(unicos((P.partidos||{}).direita))+'.</p><p class="frase">Os bairros vêm do endereço de cada local de votação no cadastro do TSE. Para achar o cartório de cada zona, veja o site do TRE-CE.</p>', fi((P.fontes||{}).zonas_ce, "TRE-CE · zonas eleitorais"))+
   '</div>';
-  document.getElementById("plSel").onchange = function(){ location.hash = this.value ? "plano-"+encodeURIComponent(this.value) : "plano"; };
+  document.getElementById("plSel").onchange = function(){ location.hash = this.value ? "contra-atacar-"+encodeURIComponent(this.value) : "contra-atacar"; };
+  mapaZonas(P, lugar);
 }
 
 /* ---------- Buscas no Google: o que o povo procura sobre a extrema-direita ---------- */
@@ -1161,6 +1225,7 @@ function rota(){
   else if (h.indexOf("cidade")===0) cidadePag(h.slice(7));
   else if (h==="prioridades") prioridadesPag();
   else if (h.indexOf("noticias")===0) noticiasPag(h.slice(9));
+  else if (h.indexOf("contra-atacar")===0) planoPag(h.slice(14));
   else if (h.indexOf("plano")===0) planoPag(h.slice(6));
   else if (h==="buscas") buscasPag();
   else if (h.indexOf("corrigir")===0) corrigirPag(h.slice(9));
