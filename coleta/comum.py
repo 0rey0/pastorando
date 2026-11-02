@@ -346,3 +346,50 @@ def resumir_gastos(itens):
         "ultimos": sorted(itens, key=lambda i: (i["mes"], i["valor"]), reverse=True)[:15],
         "n": len(itens),
     }
+
+
+# ---------- gastos de todos os anos do mandato ----------
+INICIO_MANDATO = {"camara": 2023, "alece": 2023, "senado": 2019}
+_ANOS = {}
+
+
+def _cache_anos():
+    if "c" not in _ANOS:
+        _ANOS["c"] = ler("gastos_anos.json", {}) or {}
+    return _ANOS["c"]
+
+
+def gastos_ano_guardado(pid, ano, dias=90):
+    """Resumo de um ano que já terminou, se foi calculado há menos de 'dias' dias."""
+    x = _cache_anos().get(pid, {}).get(str(ano))
+    if x and x.get("_epoch", 0) > time.time() - dias * 86400:
+        return x
+    return None
+
+
+def guardar_gastos_ano(pid, ano, resumo):
+    r = {k: v for k, v in resumo.items() if k != "ultimos"}
+    r["por_categoria"] = r.get("por_categoria", [])[:10]
+    r["fornecedores"] = r.get("fornecedores", [])[:5]
+    r["_epoch"] = int(time.time())
+    _cache_anos().setdefault(pid, {})[str(ano)] = r
+    return r
+
+
+def salvar_gastos_anos():
+    if "c" in _ANOS:
+        salvar("gastos_anos.json", _ANOS["c"])
+
+
+def juntar_anos(p, ano_atual):
+    """Põe em p['gastos_anos'] todos os anos do mandato (os anteriores vêm da guarda) e o total do mandato."""
+    anos = {}
+    for a, r in sorted(_cache_anos().get(p["id"], {}).items()):
+        if int(a) < ano_atual and int(a) >= INICIO_MANDATO.get(p["casa"], 2023):
+            anos[a] = {k: v for k, v in r.items() if not k.startswith("_")}
+    if p.get("gastos"):
+        g = p["gastos"]
+        anos[str(ano_atual)] = {k: g[k] for k in ("total", "n", "meses", "por_mes", "por_categoria", "fornecedores", "maior_fornecedor_pct", "teto_periodo", "pct_teto") if k in g}
+    if anos:
+        p["gastos_anos"] = anos
+        p["gastos_mandato"] = {"total": round(sum(x["total"] for x in anos.values()), 2), "desde": int(min(anos)), "anos": len(anos)}

@@ -15,8 +15,28 @@ ETAPAS = ["Apresentado", "Nas comissões", "No plenário", "Aprovado na Câmara"
 
 
 def temas_de(texto, cfg):
+    """Temas do Radar em que o texto entra: precisa achar o assunto ('palavras'), um sinal de retrocesso ('precisa', quando há)
+    e nenhum sinal da direção oposta ('contra' do tema ou 'contra_geral')."""
     t = " " + norm(texto) + " "
-    return [k for k, tema in cfg["temas"].items() if any(p in t for p in tema["palavras"])]
+    if any(c in t for c in cfg.get("contra_geral", [])):
+        return []
+    out = []
+    for k, tema in cfg["temas"].items():
+        if not any(_tem(t, p) for p in tema["palavras"]):
+            continue
+        if tema.get("precisa") and not any(_tem(t, p) for p in tema["precisa"]):
+            continue
+        if any(_tem(t, c) for c in tema.get("contra", [])):
+            continue
+        out.append(k)
+    return out
+
+
+def _tem(t, p):
+    """Palavra curta (até 4 letras, como 'mst' ou 'cacs') só vale como palavra inteira."""
+    if len(p.strip()) <= 4:
+        return re.search(r"(?<![a-z0-9])%s(?![a-z0-9])" % re.escape(p.strip()), t) is not None
+    return p in t
 
 
 def etapa(st):

@@ -183,9 +183,11 @@ for ano, linhas in ((2018, c18), (2022, c22), (2026, c26)):
         ["SG_UF", "SQ_CANDIDATO", "NR_ORDEM_REDE_SOCIAL", "DS_URL"], [["CE", sq, 1, "https://www.instagram.com/perfil%s" % sq] for sq in sqs] + [["CE", sqs[0], 2, "https://x.com/perfil%s" % sqs[0]]])})
     tse_fx["bem_candidato_%d.zip" % ano] = zipa("tse_bens_%d.zip" % ano, {"bem_candidato_%d_CE.csv" % ano: csv_tse(
         ["SG_UF", "SQ_CANDIDATO", "DS_TIPO_BEM_CANDIDATO", "DS_BEM_CANDIDATO", "VR_BEM_CANDIDATO"], [["CE", sq, "Casa", "Casa em Fortaleza", "350000,00"] for sq in sqs] + [["CE", sqs[0], "Veículo", "Carro", "80000,00"]])})
+    pres = [] if ano != 2026 else [[t, "PRESIDENTE", sq, nr, urna, sig] for t in (1, 2) for sq, nr, urna, sig in (("80001", "22", "FLAVIO BOLSONARO", "PL"), ("80002", "13", "LULA", "PT"))]
     tse_fx["votacao_candidato_munzona_%d.zip" % ano] = zipa("tse_votos_%d.zip" % ano, {"votacao_candidato_munzona_%d_CE.csv" % ano: csv_tse(
-        ["SG_UF", "NR_TURNO", "NM_MUNICIPIO", "NR_ZONA", "SQ_CANDIDATO", "QT_VOTOS_NOMINAIS"],
-        [["CE", l[10], m, z, l[2], random.randint(100, 5000)] for l in linhas for m in ("FORTALEZA", "SOBRAL", "JUAZEIRO DO NORTE", "CRATO") for z in (1, 2)])})
+        ["SG_UF", "NR_TURNO", "DS_CARGO", "NM_MUNICIPIO", "NR_ZONA", "SQ_CANDIDATO", "NR_CANDIDATO", "NM_URNA_CANDIDATO", "SG_PARTIDO", "QT_VOTOS_NOMINAIS"],
+        [["CE", l[10], l[1], m, z, l[2], l[3], l[5], l[8], random.randint(100, 5000)] for l in linhas for m in ("FORTALEZA", "SOBRAL", "JUAZEIRO DO NORTE", "CRATO") for z in (1, 2)]
+        + [["CE", t, c, m, z, sq, nr, u, sg, (7000 if sg == "PL" and m == "CRATO" else 3000) + 10 * z] for t, c, sq, nr, u, sg in pres for m in ("FORTALEZA", "SOBRAL", "JUAZEIRO DO NORTE", "CRATO") for z in (1, 2)])})
     tse_fx["prestacao_de_contas_eleitorais_candidatos_%d.zip" % ano] = zipa("tse_contas_%d.zip" % ano, {
         "receitas_candidatos_%d_CE.csv" % ano: csv_tse(["SG_UF", "SQ_CANDIDATO", "DS_FONTE_RECEITA", "DS_ORIGEM_RECEITA", "NR_CPF_CNPJ_DOADOR", "NM_DOADOR", "NM_DOADOR_RFB", "VR_RECEITA"],
             [["CE", sq, "Fundo Especial", "Recursos de partido político", "", "PARTIDO", "PARTIDO", "200000,00"] for sq in sqs]
@@ -214,18 +216,37 @@ siconfi = {"items": [{"conta": f, "coluna": COL, "valor": v} for f, v in [("Saú
 radar_det = {"dados": {"id": 5005, "siglaTipo": "PL", "numero": 105, "ano": ANO, "ementa": EMENTAS[5],
                        "statusProposicao": {"dataHora": "%d-10-20T10:00" % ANO, "siglaOrgao": "PLEN", "regime": "Urgência (Art. 155, RICD)", "descricaoSituacao": "Pronta para Pauta no PLENÁRIO (PLEN)", "descricaoTramitacao": "Aprovado requerimento de urgência"}}}
 radar_aut = {"dados": [{"nome": "Ana Exemplo", "tipo": "Deputado"}, {"nome": "Fulano de Outro Estado", "tipo": "Deputado"}]}
+# Plano de ação: votos por seção e locais de votação (2026)
+secoes = [["CE", t, "FORTALEZA", z, sec, "PRESIDENTE", nr, q, loc, "ESCOLA %s" % loc, "RUA %s" % loc]
+          for t in (1, 2) for z, sec, loc in ((1, 10, "1015"), (1, 11, "1015"), (2, 20, "1023")) for nr, q in (("22", 300 if loc == "1015" else 120), ("13", 150 if loc == "1015" else 330), ("95", 5))]
+tse_secao = zipa("tse_secao.zip", {"votacao_secao_2026_CE.csv": csv_tse(["SG_UF", "NR_TURNO", "NM_MUNICIPIO", "NR_ZONA", "NR_SECAO", "DS_CARGO", "NR_VOTAVEL", "QT_VOTOS", "NR_LOCAL_VOTACAO", "NM_LOCAL_VOTACAO", "DS_LOCAL_VOTACAO_ENDERECO"], secoes)})
+tse_locais = zipa("tse_locais.zip", {"eleitorado_local_votacao_2026.csv": csv_tse(["SG_UF", "NM_MUNICIPIO", "NR_ZONA", "NR_LOCAL_VOTACAO", "NM_BAIRRO"],
+    [["CE", "FORTALEZA", 1, "1015", "ALDEOTA"], ["CE", "FORTALEZA", 2, "1023", "BOM JARDIM"], ["SP", "SAO PAULO", 1, "1015", "CENTRO"]])})
+trends_rss = grava("trends.xml", ('<?xml version="1.0"?><rss xmlns:ht="https://trends.google.com/trending/rss"><channel>'
+    '<item><title>flavio bolsonaro</title><ht:approx_traffic>50000+</ht:approx_traffic><pubDate>Mon, 26 Oct %d 10:00:00 GMT</pubDate>'
+    '<ht:news_item><ht:news_item_title>Flávio fala após derrota</ht:news_item_title><ht:news_item_url>https://jornal.exemplo/f</ht:news_item_url></ht:news_item></item>'
+    '<item><title>previsao do tempo</title><ht:approx_traffic>20000+</ht:approx_traffic></item></channel></rss>' % ANO).encode())
+trends_explore = grava("trends_explore.json", b')]}\'\n{"widgets":[{"id":"RELATED_QUERIES","token":"tk","request":{"x":1}}]}')
+trends_rel = grava("trends_rel.json", (')]}\',\n' + json.dumps({"default": {"rankedList": [{"rankedKeyword": [{"query": "bolsonaro preso", "formattedValue": "100"}]},
+    {"rankedKeyword": [{"query": "bolsonaro eua", "formattedValue": "+250%"}]}]}})).encode())
+
 # IBGE e jornais
 cidades = [{"id": 2304400, "nome": "Fortaleza"}, {"id": 2312908, "nome": "Sobral"}, {"id": 2307304, "nome": "Juazeiro do Norte"}, {"id": 2303709, "nome": "Crato"}]
 ibge_res = [{"id": 1, "res": [{"localidade": str(c["id"])[:6], "res": {"2010": "%.3f" % (0.6 + 0.03 * i), "2000": "0.5"}} for i, c in enumerate(cidades)]}]
 rss_jornal = ('<?xml version="1.0"?><rss><channel><title>Jornal</title>'
-              '<item><title>Câmara aprova urgência do PL 105/%d que privatiza empresa de água</title><link>https://jornal.exemplo/1</link><pubDate>Mon, 26 Oct %d 10:00:00 GMT</pubDate></item>'
-              '<item><title>Ana Exemplo defende ampliar o porte de arma para atiradores</title><link>https://jornal.exemplo/2</link><pubDate>Tue, 27 Oct %d 10:00:00 GMT</pubDate></item>'
+              '<item><title>Bancada bolsonarista aprova urgência do PL 105/%d que privatiza empresa de água</title><link>https://jornal.exemplo/1</link><pubDate>Mon, 26 Oct %d 10:00:00 GMT</pubDate></item>'
+              '<item><title>Bolsonarista Ana Exemplo defende ampliar o porte de arma para atiradores</title><link>https://jornal.exemplo/2</link><pubDate>Tue, 27 Oct %d 10:00:00 GMT</pubDate></item>'
               '<item><title>Chuva forte em Fortaleza</title><link>https://jornal.exemplo/3</link><pubDate>Tue, 27 Oct %d 10:00:00 GMT</pubDate></item>'
               '</channel></rss>') % (ANO, ANO, ANO, ANO)
 rss_google = ('<?xml version="1.0"?><rss><channel><item><title>Extrema-direita articula nova ofensiva no Congresso - O Povo</title><link>https://news.google.com/rss/articles/abc</link>'
               '<pubDate>Wed, 28 Oct %d 10:00:00 GMT</pubDate><source url="https://www.opovo.com.br">O Povo</source></item></channel></rss>') % ANO
 comum.FALSO = {
     "re:/localidades/estados/23/municipios": grava("ibge_municipios.json", cidades),
+    "re:votacao_secao_2026_CE\\.zip": tse_secao,
+    "re:eleitorado_local_votacao_2026\\.zip": tse_locais,
+    "re:trends\\.google\\.com/trending/rss": trends_rss,
+    "re:trends\\.google\\.com/trends/api/explore": trends_explore,
+    "re:trends\\.google\\.com/trends/api/widgetdata": trends_rel,
     "re:/pesquisas/indicadores/": grava("ibge_indicador.json", ibge_res),
     "re:news\\.google\\.com/rss/search": grava("google_noticias.xml", rss_google),
     "re:(g1\\.globo\\.com/rss|feeds\\.folha|estadao\\.com\\.br/arc)": grava("jornal.xml", rss_jornal),
@@ -346,6 +367,17 @@ confere(any("c5005" in i["radar"] for i in no), "notícia não ligada ao projeto
 confere(any("c900" in i["pessoas"] for i in no), "notícia não ligada à deputada citada")
 confere(not any("Chuva" in i["titulo"] for i in no), "notícia sem relação entrou")
 confere(any(i["titulo"].endswith("Congresso") for i in no), "nome do jornal não saiu do título do Google")
+# plano de ação
+pl = L("plano.json")
+confere(pl["zonas"] and pl["zonas"][0]["municipio"] == "Crato" and pl["zonas"][0]["pres2_extrema"] > 60, pl["zonas"][:2])
+confere(pl["bairros"] and pl["bairros"][0]["bairro"] == "Aldeota" and pl["bairros"][0]["extrema"] > 60, pl.get("bairros"))
+confere(pl["municipios"]["Crato"]["forca"] > pl["municipios"]["Sobral"]["forca"], pl["municipios"])
+# Google Trends
+tr = L("tendencias.json")
+confere([x["busca"] for x in tr["em_alta"]] == ["flavio bolsonaro"], tr["em_alta"])
+confere(tr["relacionadas"].get("Bolsonaro", {}).get("subindo", [{}])[0].get("busca") == "bolsonaro eua", tr["relacionadas"])
+# gastos de todos os anos
+confere(por["c900"].get("gastos_anos") and len(por["c900"]["gastos_anos"]) == ANO - 2022 and por["c900"]["gastos_mandato"]["desde"] == 2023, por["c900"].get("gastos_mandato"))
 # avisos
 confere(os.path.exists(os.path.join(SAIDA, "feeds", "c900.xml")), "feed RSS")
 if falhas:

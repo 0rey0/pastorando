@@ -40,14 +40,37 @@ def temas_de(texto, temas, gerais):
     return achados
 
 
+def classificar_noticia(titulo, cfg, atores):
+    """Só entra notícia sobre a extrema-direita (cita um ator ou termo) e sobre projeto, fala ou plano.
+    Devolve a lista de tipos (vazia = fica de fora)."""
+    t = " " + norm(titulo) + " "
+    if any(x in t for x in cfg.get("excluir_titulo", [])) or norm(titulo).startswith(("opiniao", "analise")):
+        return []
+    t_sem = t
+    for x in cfg.get("nao_atores", []):
+        t_sem = t_sem.replace(x, " ")
+    if not any(a in t_sem for a in atores):
+        return []
+    return [k for k, tp in cfg.get("tipos", {}).items() if any(p in t for p in tp["palavras"])]
+
+
 def coletar(pessoas, radar_pacote):
     cfg = config("noticias.json")
     rcfg = config("radar.json")
     temas = rcfg["temas"]
     hoje = datetime.date.today()
     limite = (hoje - datetime.timedelta(days=cfg.get("dias", 30))).isoformat()
+    atores = sorted({norm(a) for a in cfg.get("atores", []) + cfg.get("termos_gerais", [])} |
+                    {norm(p.get("nome_urna") or p["nome"]) for p in pessoas
+                     if (p.get("partido") or "").upper() in cfg.get("partidos_extrema_direita", []) and len(norm(p.get("nome_urna") or p["nome"]).split()) >= 2})
     velho = ler("noticias.json", {}) or {}
     itens = {i["link"]: i for i in velho.get("itens", []) if (i.get("data") or "9999") >= limite}
+    for link in list(itens):  # as notícias antigas passam pelo filtro novo também
+        tp = classificar_noticia(itens[link]["titulo"], cfg, atores)
+        if tp:
+            itens[link]["tipos"] = tp
+        else:
+            del itens[link]
     status = {}
     for f in cfg["fontes"]:
         n_antes = len(itens)
@@ -58,7 +81,8 @@ def coletar(pessoas, radar_pacote):
             except Exception as e:  # noqa: BLE001
                 print("  RSS de %s falhou (%s): %s" % (f["nome"], u, e))
         if cfg.get("busca_google_noticias"):
-            grupos = [(k, t["palavras"][:4]) for k, t in temas.items()] + [("geral", cfg.get("termos_gerais", []))]
+            grupos = [(k, t["palavras"][:4]) for k, t in temas.items()] + [("geral", cfg.get("termos_gerais", [])[:6]),
+                                                                           ("atores", ["Bolsonaro", "bolsonarismo", "extrema direita", "Nikolas Ferreira", "André Fernandes", "Girão"])]
             for k, palavras in grupos:
                 q = "(" + " OR ".join('"%s"' % p for p in palavras) + ") site:%s when:%dd" % (f["site"], cfg.get("dias", 30))
                 try:
@@ -67,10 +91,11 @@ def coletar(pessoas, radar_pacote):
                     print("  busca de notícias (%s, %s) falhou: %s" % (f["nome"], k, e))
         for tit, link, d, _fonte in brutos:
             tit = re.sub(r"\s+-\s+[^-]{2,40}$", "", tit) if "news.google" in link else tit  # tira " - Nome do jornal"
-            tm = temas_de(tit, temas, cfg.get("termos_gerais", []))
-            if not tm or (d and d < limite):
+            tm = temas_de(tit, temas, cfg.get("termos_gerais", [])) or ["geral"]
+            tp = classificar_noticia(tit, cfg, atores)
+            if not tp or (d and d < limite):
                 continue
-            itens.setdefault(link, {"titulo": tit, "link": link, "fonte": f["nome"], "data": d, "temas": tm})
+            itens.setdefault(link, {"titulo": tit, "link": link, "fonte": f["nome"], "data": d, "temas": tm, "tipos": tp})
         status[f["nome"]] = len(itens) - n_antes
     # liga cada notícia a projetos do Radar e a políticos do Ceará citados pelo nome
     radar_itens = (radar_pacote or {}).get("itens", [])
@@ -95,7 +120,8 @@ def coletar(pessoas, radar_pacote):
     lista = unicos[: cfg.get("maximo", 300)]
     pacote = {"quando": agora(), "dias": cfg.get("dias", 30), "itens": lista, "por_fonte": status,
               "fontes": [{"nome": f["nome"], "site": f["site"]} for f in cfg["fontes"]],
-              "temas": {k: t["nome"] for k, t in temas.items()} | {"geral": "Extrema-direita em geral"}}
+              "temas": {k: t["nome"] for k, t in temas.items()} | {"geral": "Extrema-direita em geral"},
+              "tipos": {k: t["nome"] for k, t in cfg.get("tipos", {}).items()}}
     salvar("noticias.json", pacote)
     print("Notícias: %d no total (%s)" % (len(lista), ", ".join("%s +%d" % kv for kv in status.items())))
     return pacote

@@ -1,19 +1,378 @@
 {
-  "_leia": "Radar do Retrocesso: projetos da agenda da extrema-direita que fazem o país andar para trás. Lista editorial e aberta: o robô procura, nos projetos que se mexeram nos últimos dias, as palavras abaixo. Para tirar um projeto que entrou por engano, ponha o id em 'excluir'. Para acompanhar um projeto que as palavras não pegam, ponha o id em 'fixos' (Câmara: o número que aparece no endereço da proposta).",
+  "_leia": "Radar do Retrocesso: projetos da agenda da extrema-direita que fazem o país andar para trás. Lista editorial e aberta. Para cada tema: 'palavras' acham o assunto (e são usadas na busca da Câmara); 'precisa' são sinais de que o projeto vai na direção do retrocesso (pelo menos um tem que aparecer, quando a lista existe); 'contra' são sinais de que o projeto vai na direção oposta (se aparecer, o projeto não entra). 'contra_geral' vale para todos os temas. Tudo sem acento e em minúsculas. Para tirar um projeto que entrou por engano, ponha o id em 'excluir' (ex.: 'c2512345' na Câmara). Para acompanhar um projeto que as palavras não pegam, ponha o id em 'fixos'.",
   "titulo": "Radar do Retrocesso",
   "dias_movimento": 90,
   "temas": {
-    "armas": {"nome": "Armas", "palavras": ["porte de arma", "posse de arma", "armas de fogo", "atiradores desportivos", "colecionadores de arma", "cacs"]},
-    "aborto": {"nome": "Ataque ao aborto legal", "palavras": ["aborto", "nascituro", "interrupcao da gestacao", "interrupcao voluntaria da gravidez"]},
-    "escola": {"nome": "Escola sem partido", "palavras": ["escola sem partido", "doutrinacao", "educacao domiciliar", "homeschooling"]},
-    "lgbt": {"nome": "Contra direitos LGBT", "palavras": ["ideologia de genero", "linguagem neutra", "identidade de genero", "transexua", "redesignacao sexual"]},
-    "anistia": {"nome": "Anistia a golpistas", "palavras": ["anistia aos", "8 de janeiro", "atos antidemocraticos", "manifestacoes politicas ocorridas"]},
-    "punicao": {"nome": "Mais punição, menos direitos", "palavras": ["maioridade penal", "excludente de ilicitude", "castracao quimica", "saida temporaria", "saidinha"]},
-    "movimentos": {"nome": "Criminalizar movimentos sociais", "palavras": ["invasao de propriedade", "invasao de terras", "esbulho possessorio", "terrorismo"]},
-    "ambiente": {"nome": "Ataque ao meio ambiente e aos indígenas", "palavras": ["marco temporal", "licenciamento ambiental", "autolicenciamento", "agrotoxico", "defensivos agricolas", "mineracao em terras indigenas"]},
-    "trabalho": {"nome": "Retirada de direitos do trabalho", "palavras": ["trabalho intermitente", "terceirizacao", "reforma trabalhista", "flexibilizacao da clt"]},
-    "privatizacao": {"nome": "Privatização", "palavras": ["privatiza", "desestatiza"]}
+    "armas": {
+      "nome": "Armas",
+      "palavras": [
+        "porte de arma",
+        "posse de arma",
+        "armas de fogo",
+        "arma de fogo",
+        "atiradores desportivos",
+        "colecionadores de arma",
+        "cacs",
+        "estatuto do desarmamento"
+      ],
+      "precisa": [
+        "autoriza",
+        "concede",
+        "concessao",
+        "amplia",
+        "ampliar",
+        "reconhec",
+        "flexibiliz",
+        "reduz",
+        "dispensa",
+        "facilita",
+        "direito ao porte",
+        "porte de arma",
+        "aquisicao",
+        "municao",
+        "revoga"
+      ],
+      "contra": [
+        "proibe",
+        "proibir",
+        "veda o porte",
+        "vedar o porte",
+        "apreensao",
+        "suspensao do porte",
+        "suspender o porte",
+        "recolhimento",
+        "agressor",
+        "violencia domestica",
+        "maria da penha",
+        "restring",
+        "desarmamento voluntario",
+        "entrega voluntaria"
+      ]
+    },
+    "aborto": {
+      "nome": "Ataque ao aborto legal",
+      "palavras": [
+        "aborto",
+        "nascituro",
+        "interrupcao da gestacao",
+        "interrupcao voluntaria da gravidez",
+        "estatuto do nascituro"
+      ],
+      "precisa": [
+        "nascituro",
+        "homicidio",
+        "crime",
+        "pena",
+        "proibe",
+        "veda",
+        "vedar",
+        "criminaliz",
+        "22 semanas",
+        "assistolia",
+        "desde a concepcao"
+      ],
+      "contra": [
+        "protecao trabalhista",
+        "previdenciari",
+        "licenca",
+        "acolhimento",
+        "atendimento humanizado",
+        "garantir o acesso",
+        "assegurar o acesso",
+        "natimorto",
+        "perda gestacional"
+      ]
+    },
+    "escola": {
+      "nome": "Escola sem partido",
+      "palavras": [
+        "escola sem partido",
+        "doutrinacao",
+        "educacao domiciliar",
+        "homeschooling",
+        "ideologia de genero nas escolas",
+        "escolas civico-militares",
+        "escola civico-militar"
+      ],
+      "precisa": [
+        "escola sem partido",
+        "doutrinacao",
+        "educacao domiciliar",
+        "homeschooling",
+        "ideologia",
+        "civico-militar",
+        "neutralidade politica"
+      ],
+      "contra": [
+        "proibe a educacao domiciliar",
+        "combate ao assedio"
+      ]
+    },
+    "lgbt": {
+      "nome": "Contra direitos LGBT",
+      "palavras": [
+        "ideologia de genero",
+        "linguagem neutra",
+        "identidade de genero",
+        "transexua",
+        "redesignacao sexual",
+        "banheiro",
+        "casamento entre pessoas do mesmo sexo"
+      ],
+      "precisa": [
+        "proibe",
+        "proibir",
+        "veda",
+        "vedar",
+        "vedacao",
+        "ideologia de genero",
+        "linguagem neutra",
+        "sexo biologico",
+        "restring",
+        "criminaliz",
+        "menores de 18"
+      ],
+      "contra": [
+        "promocao",
+        "combate a lgbtfobia",
+        "combate a homofobia",
+        "combate a transfobia",
+        "politica nacional de cuidados",
+        "saude integral",
+        "formacao continuada",
+        "inclusao",
+        "acolhimento",
+        "nome social",
+        "cidadania lgbt",
+        "direitos da populacao lgbt"
+      ]
+    },
+    "anistia": {
+      "nome": "Anistia a golpistas",
+      "palavras": [
+        "anistia aos",
+        "anistia a",
+        "8 de janeiro",
+        "atos antidemocraticos",
+        "manifestacoes politicas ocorridas",
+        "golpe de estado",
+        "abolicao violenta"
+      ],
+      "precisa": [
+        "anistia",
+        "perdao",
+        "extincao da punibilidade",
+        "reduz a pena",
+        "dosimetria",
+        "revisao das penas"
+      ],
+      "contra": [
+        "veda a anistia",
+        "proibe a anistia",
+        "vedar a anistia",
+        "impede a anistia"
+      ]
+    },
+    "punicao": {
+      "nome": "Mais punição, menos direitos",
+      "palavras": [
+        "maioridade penal",
+        "excludente de ilicitude",
+        "castracao quimica",
+        "saida temporaria",
+        "saidinha",
+        "prisao perpetua",
+        "pena de morte"
+      ],
+      "precisa": [
+        "reduz",
+        "reducao",
+        "excludente",
+        "castracao",
+        "veda",
+        "vedar",
+        "extingue",
+        "acaba",
+        "fim da",
+        "perpetua",
+        "pena de morte",
+        "amplia a"
+      ],
+      "contra": [
+        "maria da penha"
+      ]
+    },
+    "movimentos": {
+      "nome": "Criminalizar movimentos sociais",
+      "palavras": [
+        "invasao de propriedade",
+        "invasao de terras",
+        "invasao de imovel",
+        "ocupacao de imovel",
+        "esbulho possessorio",
+        "movimentos sociais",
+        "mst",
+        "reforma agraria",
+        "terrorismo rural"
+      ],
+      "precisa": [
+        "terrorismo",
+        "crime",
+        "criminaliz",
+        "tipifica",
+        "pena",
+        "reintegracao",
+        "desocupacao",
+        "vedar",
+        "veda",
+        "impede",
+        "proibe",
+        "excluir",
+        "exclui",
+        "cadastro",
+        "antiterrorismo",
+        "hediondo",
+        "bloqueio"
+      ],
+      "contra": [
+        "acordo de cooperacao",
+        "tratado",
+        "barragem",
+        "instituicoes financeiras",
+        "fintech",
+        "financiamento ao terrorismo",
+        "lavagem de dinheiro",
+        "assentamento de familias",
+        "fortalecimento da reforma agraria"
+      ]
+    },
+    "ambiente": {
+      "nome": "Ataque ao meio ambiente e aos indígenas",
+      "palavras": [
+        "marco temporal",
+        "licenciamento ambiental",
+        "autolicenciamento",
+        "agrotoxico",
+        "defensivos agricolas",
+        "mineracao em terras indigenas",
+        "codigo florestal",
+        "desmatamento",
+        "terras indigenas",
+        "unidades de conservacao",
+        "area de preservacao permanente",
+        "reserva legal"
+      ],
+      "precisa": [
+        "dispensa",
+        "nao sujeicao",
+        "isenta",
+        "simplific",
+        "flexibiliz",
+        "autolicenciamento",
+        "licenca por adesao",
+        "marco temporal",
+        "reduz",
+        "procedimentos especiais",
+        "libera",
+        "anistia",
+        "regulariza",
+        "consolidad",
+        "exploracao",
+        "mineracao em terras indigenas",
+        "prazo",
+        "aprovacao tacita"
+      ],
+      "contra": [
+        "vedacao",
+        "veda ",
+        "proibe",
+        "proibir",
+        "obrigatoriedade",
+        "indicacao expressa",
+        "protecao",
+        "recuperacao",
+        "combate ao desmatamento",
+        "restringe",
+        "amplia a protecao",
+        "patrocin"
+      ]
+    },
+    "trabalho": {
+      "nome": "Retirada de direitos do trabalho",
+      "palavras": [
+        "trabalho intermitente",
+        "terceirizacao",
+        "reforma trabalhista",
+        "flexibilizacao da clt",
+        "jornada de trabalho",
+        "contrato de trabalho",
+        "clt",
+        "escala 6x1",
+        "prestacao de servicos autonomos"
+      ],
+      "precisa": [
+        "flexibiliz",
+        "intermitente",
+        "terceiriz",
+        "negociado",
+        "prevalec",
+        "acordo individual",
+        "reduz",
+        "suprime",
+        "revoga",
+        "autonom",
+        "pejotiz",
+        "livre negociacao",
+        "extingue",
+        "dispensa"
+      ],
+      "contra": [
+        "ampliar a protecao",
+        "ampliar a protecao trabalhista",
+        "reducao da jornada",
+        "fim da escala 6x1",
+        "garante",
+        "assegura",
+        "estabilidade",
+        "bolsa familia",
+        "beneficiario",
+        "beneficio social"
+      ]
+    },
+    "privatizacao": {
+      "nome": "Privatização",
+      "palavras": [
+        "privatiza",
+        "desestatiza",
+        "desestatizacao",
+        "alienacao do controle acionario",
+        "capital privado"
+      ],
+      "precisa": [
+        "privatiza",
+        "desestatiza",
+        "alienacao",
+        "autoriza a venda",
+        "concessao",
+        "programa nacional de desestatizacao"
+      ],
+      "contra": [
+        "veda a privatizacao",
+        "proibe a privatizacao",
+        "impede a privatizacao",
+        "reestatiza"
+      ]
+    }
   },
-  "fixos": {"camara": [], "alece": []},
-  "excluir": []
+  "fixos": {
+    "camara": [],
+    "alece": []
+  },
+  "excluir": [],
+  "contra_geral": [
+    "aprova o texto do acordo",
+    "aprova o texto da convencao",
+    "aprova o texto do tratado",
+    "acordo de cooperacao entre"
+  ]
 }

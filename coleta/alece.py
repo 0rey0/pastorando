@@ -8,7 +8,7 @@ import html as htmllib
 import io
 import re
 
-from comum import (DIAG, achar_coluna, casar_nome, classificar, config, fonte, get, homenagem, ler, ler_csv, norm, numero_br,
+from comum import (DIAG, INICIO_MANDATO, gastos_ano_guardado, guardar_gastos_ano, juntar_anos, achar_coluna, casar_nome, classificar, config, fonte, get, homenagem, ler, ler_csv, norm, numero_br,
                    resumir_gastos, salvar, slug)
 
 URL = "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar/csv"
@@ -127,7 +127,7 @@ def _texto_pdf(bruto):
 
 VERBOS_EMENTA = (r"Disp[õo]e|Institui|Altera|Cria|Denomina|Declara|Concede|Autoriza|Estabelece|Pro[íi]be|Obriga|Assegura|Garante|Reconhece|"
                  r"Acrescenta|Revoga|Torna|Inclui|Regulamenta|Determina|Considera|Modifica|Disciplina|Fixa|Inscreve|Indica|Sugere|Solicita|Requer|Prorroga|Ratifica|Aprova")
-PARSER = 3  # suba este número quando o leitor de PDF mudar: os PDFs que não deram certo são lidos de novo
+PARSER = 4  # suba este número quando o leitor de PDF mudar: os PDFs que não deram certo são lidos de novo
 
 
 def _limpa_autor(a):
@@ -153,7 +153,10 @@ def ler_proposicao(texto):
     em = ementa.group(1) if ementa else None
     if not em:  # modelo do sistema de assinatura da ALECE: "Descrição: DISPÕE SOBRE ..."
         d = re.search(r"Descri[çc][ãa]o\s*:\s*(.+)", t, flags=re.I)
-        if d:
+        corpo = re.search(r"\n\s*\d{2}/\d{2}/\d{4}\s*\n\s*(.{15,900}?)(?:\n\s*\n|A ASSEMBLEIA|O GOVERNADOR|Art\.?\s*1|ART\.?\s*1|$)", t, flags=re.S)
+        if corpo and (not d or len(corpo.group(1)) > len(d.group(1)) + 10):
+            em = corpo.group(1)  # a "Descrição" do cabeçalho é cortada em ~100 letras; o corpo traz a ementa inteira
+        elif d:
             em = re.sub(r"^(?:PROJETO DE (?:LEI|INDICA[ÇC][ÃA]O)(?: COMPLEMENTAR)?|INDICA[ÇC][ÃA]O|PROPOSTA DE EMENDA [^Q]*?)\s+QUE\s+", "", d.group(1).strip(), flags=re.I)
     if not em or len(em.strip()) < 12 or em.strip()[:1] in "“\"'":
         m = re.search(r"((?:%s)\b.{10,600}?(?:providências|\.\s*\n|\.\s+(?=[A-ZÁÉÍÓÚ])))" % VERBOS_EMENTA, t, flags=re.S)
@@ -287,6 +290,24 @@ def coletar(ano=None):
                                    "teto": fonte("ALECE · Resolução 762/2023 (valor da verba)", "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar"),
                                    "votos": fonte("ALECE · votações nominais", PAG_VOT),
                                    "projetos": fonte("ALECE · proposições em tramitação (PDF de cada uma)", "https://www.al.ce.gov.br/legislativo")}})
+    # anos anteriores do mandato: um CSV por mês (só na primeira vez; depois fica guardado)
+    for a in range(INICIO_MANDATO["alece"], ano):
+        if all(gastos_ano_guardado(p["id"], a) for p in pessoas):
+            continue
+        doano = {}
+        for m in range(1, 13):
+            try:
+                for it in mes(a, m):
+                    doano.setdefault("a-" + slug(it.pop("deputado")), []).append(it)
+            except Exception as e:  # noqa: BLE001
+                print("  ALECE %02d/%d falhou: %s" % (m, a, e))
+        for pid, itens in doano.items():
+            g = resumir_gastos(itens)
+            g["teto_periodo"] = round(TETO_MENSAL * max(1, len(g["meses"])), 2)
+            g["pct_teto"] = round(100 * g["total"] / g["teto_periodo"], 1) if g["teto_periodo"] else None
+            guardar_gastos_ano(pid, a, g)
+    for p in pessoas:
+        juntar_anos(p, ano)
     print("ALECE: %d deputados com Verba de Desempenho em %d" % (len(pessoas), ano))
     vots = []
     try:

@@ -1,0 +1,9 @@
+{
+  "_leia": "Classificação editorial do EspiaCE, aberta para revisão: em que campo político cada partido está. É usada no Plano de ação para somar votos por zona eleitoral. O 'Plano de ação' mede, em cada zona, a parte dos votos que foi para o candidato da extrema-direita no 2º turno para presidente (ou, se não houver, a média do 1º turno para presidente e deputados). Para mudar um partido de grupo, mova a sigla de lista. Siglas sem grupo contam como 'outros'.",
+  "partidos": {
+    "extrema_direita": ["PL", "NOVO", "PRTB", "DC", "MISSÃO", "MISSAO"],
+    "direita": ["PP", "REPUBLICANOS", "UNIÃO", "UNIAO", "PODE", "PRD", "AGIR", "MOBILIZA", "PMB"],
+    "centro": ["PSD", "MDB", "PSDB", "CIDADANIA", "SOLIDARIEDADE", "AVANTE"],
+    "esquerda": ["PT", "PSOL", "PC do B", "PCdoB", "PV", "REDE", "PSB", "PDT", "UP", "PSTU", "PCB", "PCO"]
+  }
+}

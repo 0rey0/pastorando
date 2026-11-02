@@ -1,0 +1,5 @@
+{
+  "_leia": "Para onde vão os pedidos de correção do formulário 'Pedir correção'. Preencha UM dos dois: 'email' (abre o programa de e-mail de quem pede, com tudo pronto) ou 'endpoint' (um formulário que recebe por você, como Formspree ou FormSubmit, para mandar sem abrir o e-mail). Sem nenhum dos dois, o pedido vira uma 'issue' no GitHub do projeto.",
+  "email": "",
+  "endpoint": ""
+}

@@ -20,17 +20,27 @@ INDICADORES = {
     "idhm_r": ("37", 30257, "IDHM Renda", "índice de 0 a 1", True),
     "idhm_l": ("37", 30259, "IDHM Longevidade", "índice de 0 a 1", True),
     "idhm_e": ("37", 30261, "IDHM Educação", "índice de 0 a 1", True),
-    "pib_pc": ("38", 47001, "PIB por pessoa", "R$", True),
-    "salario": ("33", 29765, "Salário médio dos trabalhadores formais", "salários mínimos", True),
+    "pib_pc": ("38", 47001, "PIB por pessoa", "R$ por ano", True),
+    "renda_pc": (None, None, "Renda média por pessoa", "R$ por mês", True),
+    "alfabetizacao": (None, None, "Pessoas de 15 anos ou mais que sabem ler e escrever", "%", True),
+    "esgoto_rede": (None, None, "Casas ligadas à rede de esgoto", "% dos domicílios", True),
+    "agua_rede": (None, None, "Casas com água da rede geral", "% dos domicílios", True),
+    "lixo_coletado": (None, None, "Casas com coleta de lixo", "% dos domicílios", True),
+    "pretos_pardos": (None, None, "Pessoas pretas e pardas", "% da população", None),
     "mort_inf": ("39", 30279, "Mortalidade infantil", "óbitos por mil nascidos vivos", False),
     "escolar": ("40", 60045, "Crianças de 6 a 14 anos na escola", "%", True),
-    # estes dois vêm só do Atlas (Censo 2010)
-    "renda_pc": (None, None, "Renda média por pessoa (valores de 2010)", "R$ por mês", True),
     "pind": (None, None, "Pessoas em extrema pobreza", "% da população", False),
 }
-# o que entra no índice de prioridade (quanto pior, mais prioridade)
-PRIORIDADE = ["idhm", "idhm_r", "mort_inf", "escolar", "pind"]
+# cópias fixas guardadas no repositório, na ordem de preferência (a API do IBGE não responde aos servidores do GitHub)
+FIXAS = [("censo2022_ce.json", "2022", {"pop": "pop", "renda_pc": "renda_pc_2022", "alfabetizacao": "alfabetizacao", "esgoto_rede": "esgoto_rede",
+                                         "agua_rede": "agua_rede", "lixo_coletado": "lixo_coletado", "pretos_pardos": "pretos_pardos", "pib_pc": "pib_pc"}),
+         ("atlas_ce_2010.json", "2010", {"pop": "pop", "idhm": "idhm", "idhm_r": "idhm_r", "idhm_l": "idhm_l", "idhm_e": "idhm_e",
+                                         "mort_inf": "mort_inf", "escolar": "escolar", "pind": "pind", "renda_pc": "renda_pc"})]
+ANO_FIXO = {"pib_pc": "2023"}
+# o que entra no índice de prioridade (quanto pior, mais prioridade): o Censo 2022 primeiro, mais o IDHM
+PRIORIDADE = ["renda_pc", "alfabetizacao", "esgoto_rede", "agua_rede", "lixo_coletado", "idhm"]
 DIAS = 7
+VERSAO = 2  # suba quando mudar os indicadores, para refazer o cálculo guardado
 
 
 def _num(v):
@@ -84,9 +94,9 @@ def _resultados_um(pesq, ind, codigos):
     return out
 
 
-def _atlas():
+def _fixa(arq):
     try:
-        with open(os.path.join(RAIZ, "config", "atlas_ce_2010.json"), encoding="utf-8") as f:
+        with open(os.path.join(RAIZ, "config", arq), encoding="utf-8") as f:
             return json.load(f)["municipios"]
     except (OSError, ValueError, KeyError):
         return {}
@@ -105,7 +115,7 @@ def faixa_idhm(v):
 def coletar(pessoas, forcar=False):
     velho = ler("municipios.json", {}) or {}
     tem_dados = any(d.get("idhm") is not None for d in (velho.get("municipios") or {}).values())
-    if not forcar and tem_dados and velho.get("epoch", 0) > time.time() - DIAS * 86400:
+    if not forcar and tem_dados and velho.get("versao") == VERSAO and velho.get("epoch", 0) > time.time() - DIAS * 86400:
         base = velho
         print("Municípios: usando indicadores guardados de", velho.get("quando"))
     else:
@@ -133,18 +143,19 @@ def coletar(pessoas, forcar=False):
                 if c:
                     muni[nomes[c]][k] = v
                     anos[k] = max(anos.get(k, ""), ano)
-        # o que o IBGE não respondeu vem do Atlas (Censo 2010), que fica guardado no próprio repositório
-        atlas = _atlas()
-        usados = 0
-        for nome, d in muni.items():
-            a = atlas.get(nome) or atlas.get(next((n for n in atlas if norm(n) == norm(nome)), ""), {})
-            for k, v in a.items():
-                if k in INDICADORES and d.get(k) is None and v is not None:
-                    d[k] = v
-                    anos.setdefault(k, "2010")
-                    usados += 1
-        if usados:
-            print("  Atlas 2010 completou %d números" % usados)
+        # o que o IBGE não respondeu vem das cópias fixas: Censo 2022 primeiro, depois o Atlas (Censo 2010)
+        for arq, ano_f, campos in FIXAS:
+            fixo = _fixa(arq)
+            usados = 0
+            for nome, d in muni.items():
+                f = fixo.get(nome) or fixo.get(next((n for n in fixo if norm(n) == norm(nome)), ""), {})
+                for k, campo in campos.items():
+                    if d.get(k) is None and f.get(campo) is not None:
+                        d[k] = f[campo]
+                        anos.setdefault(k, ANO_FIXO.get(k, ano_f))
+                        usados += 1
+            if usados:
+                print("  %s completou %d números" % (arq, usados))
         base = {"municipios": muni, "anos": anos}
     muni = base["municipios"]
     # índice de prioridade: média das posições (0 = melhor do estado, 100 = pior)
@@ -172,13 +183,14 @@ def coletar(pessoas, forcar=False):
     for n, d in muni.items():
         d["emendas"] = round(em.get(n, 0), 2)
         d["emendas_pc"] = round(em.get(n, 0) / d["pop"], 2) if d.get("pop") else None
-    pacote = {"quando": base.get("quando") or agora(), "epoch": base.get("epoch") or int(time.time()), "anos": base.get("anos", {}),
+    pacote = {"versao": VERSAO, "quando": base.get("quando") or agora(), "epoch": base.get("epoch") or int(time.time()), "anos": base.get("anos", {}),
               "indicadores": {k: {"nome": v[2], "unidade": v[3], "maior_melhor": v[4]} for k, v in INDICADORES.items()},
               "prioridade_usa": PRIORIDADE, "municipios": muni,
               "fontes": {"ibge": fonte("IBGE Cidades", "https://cidades.ibge.gov.br/brasil/ce/panorama"),
                          "idhm": fonte("Atlas do Desenvolvimento Humano no Brasil (PNUD, Ipea, FJP)", "http://www.atlasbrasil.org.br/"),
                          "api": fonte("IBGE · API de pesquisas", "https://servicodados.ibge.gov.br/api/docs/pesquisas"),
-                         "atlas": fonte("Atlas Brasil · planilha municipal (Censo 2010)", "http://www.atlasbrasil.org.br/acervo/biblioteca")}}
+                         "atlas": fonte("Atlas Brasil · planilha municipal (Censo 2010)", "http://www.atlasbrasil.org.br/acervo/biblioteca"),
+                         "censo": fonte("IBGE · Censo Demográfico 2022", "https://censo2022.ibge.gov.br/panorama/")}}
     salvar("municipios.json", pacote)
     print("Municípios: %d cidades; %d com índice de prioridade" % (len(muni), len(ordem)))
     return pacote

@@ -17,6 +17,8 @@ import governo  # noqa: E402
 import municipios  # noqa: E402
 import noticias  # noqa: E402
 import radar  # noqa: E402
+import plano  # noqa: E402
+import tendencias  # noqa: E402
 import comum  # noqa: E402
 import senado  # noqa: E402
 import tse  # noqa: E402
@@ -35,6 +37,8 @@ NOMES_EXTRA = {
     "radar": "Radar do Retrocesso (Câmara e ALECE)",
     "municipios": "IBGE Cidades (IDHM, renda, saúde, educação das cidades)",
     "noticias": "Jornais (O Povo, Diário do Nordeste, Folha, Estadão, G1)",
+    "plano": "Plano de ação (TSE 2026 por zona eleitoral e bairro)",
+    "tendencias": "Google Trends (buscas sobre a extrema-direita)",
 }
 
 
@@ -102,8 +106,10 @@ def principal():
     radar_novo = _etapa(status, "radar", radar.coletar, pessoas, votacoes)
     _etapa(status, "municipios", municipios.coletar, pessoas)
     _etapa(status, "noticias", noticias.coletar, pessoas, radar_novo or radar_antigo)
+    _etapa(status, "plano", plano.coletar)
+    _etapa(status, "tendencias", tendencias.coletar)
     votacoes.sort(key=lambda v: v.get("data") or "", reverse=True)
-    for chave in ("tse", "alece_projetos", "emendas", "governo", "radar", "municipios", "noticias"):
+    for chave in ("tse", "alece_projetos", "emendas", "governo", "radar", "municipios", "noticias", "plano", "tendencias"):
         if not status.get(chave, {}).get("ok"):
             ant = (meta_antiga.get("fontes") or {}).get(chave, {})
             status.setdefault(chave, {"nome": NOMES_EXTRA[chave], "ok": False})["ultimo_sucesso"] = ant.get("quando") if ant.get("ok") else ant.get("ultimo_sucesso")
@@ -114,6 +120,7 @@ def principal():
             print("Telegram: %d votações avisadas" % enviados)
     except Exception:  # noqa: BLE001
         traceback.print_exc()
+    comum.salvar_gastos_anos()
     salvar("parlamentares.json", pessoas)
     salvar("votacoes.json", votacoes)
     if gov:
@@ -122,7 +129,7 @@ def principal():
         salvar("eleicao.json", {"eleitos2026": pacote.get("eleitos2026", []), "governo": pacote.get("governo", {}), "fontes": pacote.get("fontes", {}),
                                 "quando": pacote.get("quando")})
     salvar("meta.json", {"atualizado": agora(), "fontes": status, "site": avisos.endereco_site(),
-                         "telegram": avisos.canal_publico(), "diagnostico": comum.DIAG, "repositorio": os.environ.get("GITHUB_REPOSITORY")})
+                         "telegram": avisos.canal_publico(), "diagnostico": comum.DIAG, "contato": {k: v for k, v in (config("contato.json") if os.path.exists(os.path.join(comum.RAIZ, "config", "contato.json")) else {}).items() if not k.startswith("_")}, "repositorio": os.environ.get("GITHUB_REPOSITORY")})
     print("\nPronto: %d parlamentares, %d votações." % (len(pessoas), len(votacoes)))
     return 0 if any(s.get("ok") for k, s in status.items() if k in ("camara", "senado", "alece")) else 1
 
